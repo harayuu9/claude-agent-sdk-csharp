@@ -4,7 +4,7 @@ using System.Text.Json;
 using ClaudeAgentSdk;
 using ClaudeAgentSdk.Internal.Transport;
 
-namespace unit_test;
+namespace UnitTest;
 
 /// <summary>
 /// Mock StreamReader for testing that returns predefined lines.

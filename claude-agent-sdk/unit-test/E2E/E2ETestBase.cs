@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using ClaudeAgentSdk;
 
-namespace unit_test.E2E;
+namespace UnitTest.E2E;
 
 /// <summary>
 /// Base class for E2E tests that require Claude CLI access.

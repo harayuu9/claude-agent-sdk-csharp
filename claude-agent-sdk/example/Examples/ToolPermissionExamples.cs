@@ -1,4 +1,3 @@
-using System.IO;
 using ClaudeAgentSdk;
 using Examples.Helpers;
 

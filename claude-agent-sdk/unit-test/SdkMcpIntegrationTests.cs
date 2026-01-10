@@ -9,7 +9,7 @@ using System.Text.Json.Serialization;
 using ClaudeAgentSdk;
 using InternalTypes = ClaudeAgentSdk.Internal;
 
-namespace unit_test;
+namespace UnitTest;
 
 public class SdkMcpIntegrationTests
 {

@@ -2,7 +2,7 @@ using System.Text.Json;
 using ClaudeAgentSdk;
 using ClaudeAgentSdk.Internal;
 
-namespace unit_test;
+namespace UnitTest;
 
 /// <summary>
 /// Tests for MessageParser error handling and message parsing.

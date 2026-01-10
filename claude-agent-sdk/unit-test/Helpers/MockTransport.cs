@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using ClaudeAgentSdk.Internal.Transport;
 
-namespace unit_test.Helpers;
+namespace UnitTest.Helpers;
 
 /// <summary>
 /// Mock transport for testing.

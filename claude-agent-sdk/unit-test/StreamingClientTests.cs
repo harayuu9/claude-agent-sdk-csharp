@@ -1,7 +1,7 @@
 using ClaudeAgentSdk;
-using unit_test.Helpers;
+using UnitTest.Helpers;
 
-namespace unit_test;
+namespace UnitTest;
 
 /// <summary>
 /// Tests for ClaudeSDKClient streaming functionality.
@@ -202,7 +202,7 @@ public class ClaudeSDKClientStreamingTests
 
         Assert.IsType<UserMessage>(messages[1]);
         var userMsg = (UserMessage)messages[1];
-        Assert.Equal("Hi there", userMsg.Content);
+        Assert.Equal("Hi there", (userMsg.Content[0] as TextBlock)?.Text);
     }
 
     /// <summary>

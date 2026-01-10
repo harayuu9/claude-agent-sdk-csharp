@@ -1,4 +1,4 @@
-﻿namespace unit_test;
+﻿namespace UnitTest;
 
 public class UnitTest1
 {

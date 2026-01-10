@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Threading.Channels;
 using ClaudeAgentSdk.Internal.Transport;
 
-namespace unit_test.Helpers;
+namespace UnitTest.Helpers;
 
 /// <summary>
 /// Mock transport for testing ClaudeSDKClient streaming functionality.

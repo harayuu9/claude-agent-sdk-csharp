@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using ClaudeAgentSdk;
 
-namespace unit_test.E2E;
+namespace UnitTest.E2E;
 
 /// <summary>
 /// End-to-end tests for SDK MCP (inline) tools with real Claude API calls.

@@ -1,13 +1,11 @@
 using System.Reflection;
 using System.Text.Json;
 using ClaudeAgentSdk;
-using ClaudeAgentSdk.Internal;
-using unit_test.Helpers;
-
+using UnitTest.Helpers;
 // Alias to resolve ambiguity between ClaudeAgentSdk.Query and ClaudeAgentSdk.Internal.Query
 using InternalQuery = ClaudeAgentSdk.Internal.Query;
 
-namespace unit_test;
+namespace UnitTest;
 
 #region ToolPermissionCallbackTests
 

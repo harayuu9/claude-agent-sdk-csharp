@@ -1,6 +1,6 @@
 using ClaudeAgentSdk;
 
-namespace unit_test;
+namespace UnitTest;
 
 /// <summary>
 /// Test message type creation and validation.
@@ -10,8 +10,17 @@ public class MessageTypesTests
     [Fact]
     public void UserMessageCreation()
     {
-        var msg = new UserMessage { Content = "Hello, Claude!" };
-        Assert.Equal("Hello, Claude!", msg.Content);
+        var msg = new UserMessage
+        {
+            Content =
+            [
+                new TextBlock
+                {
+                    Text = "Hello, Claude!"
+                }
+            ]
+        };
+        Assert.Equal("Hello, Claude!", (msg.Content[0] as TextBlock)?.Text);
     }
 
     [Fact]

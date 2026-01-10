@@ -1,6 +1,6 @@
 using ClaudeAgentSdk;
 
-namespace unit_test.E2E;
+namespace UnitTest.E2E;
 
 /// <summary>
 /// End-to-end tests for tool permission callbacks with real Claude API calls.

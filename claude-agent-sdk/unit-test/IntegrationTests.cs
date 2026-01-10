@@ -1,7 +1,7 @@
 using ClaudeAgentSdk;
-using unit_test.Helpers;
+using UnitTest.Helpers;
 
-namespace unit_test;
+namespace UnitTest;
 
 /// <summary>
 /// Integration tests for Claude SDK.

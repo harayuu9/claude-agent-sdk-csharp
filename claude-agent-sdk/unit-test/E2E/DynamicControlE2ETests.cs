@@ -1,6 +1,6 @@
 using ClaudeAgentSdk;
 
-namespace unit_test.E2E;
+namespace UnitTest.E2E;
 
 /// <summary>
 /// End-to-end tests for dynamic control features with real Claude API calls.

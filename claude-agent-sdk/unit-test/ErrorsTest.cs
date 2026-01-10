@@ -1,7 +1,7 @@
 using System.Text.Json;
 using ClaudeAgentSdk;
 
-namespace unit_test;
+namespace UnitTest;
 
 public class ErrorsTest
 {

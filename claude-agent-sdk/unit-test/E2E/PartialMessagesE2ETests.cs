@@ -1,6 +1,6 @@
 using ClaudeAgentSdk;
 
-namespace unit_test.E2E;
+namespace UnitTest.E2E;
 
 /// <summary>
 /// End-to-end tests for include_partial_messages option with real Claude API calls.

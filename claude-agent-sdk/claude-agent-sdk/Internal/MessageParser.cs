@@ -68,7 +68,13 @@ public static class MessageParser
             // Content is a string
             return new UserMessage
             {
-                Content = messageContent.GetString() ?? "",
+                Content =
+                [
+                    new TextBlock
+                    {
+                        Text = messageContent.GetString() ?? ""
+                    }
+                ],
                 Uuid = uuid,
                 ParentToolUseId = parentToolUseId
             };

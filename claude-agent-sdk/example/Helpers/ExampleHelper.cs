@@ -1,4 +1,3 @@
-using System.IO;
 using System.Text.Json;
 using ClaudeAgentSdk;
 
@@ -52,11 +51,7 @@ public static class ExampleHelper
     public static void DisplayUserMessage(UserMessage msg)
     {
         // Content can be a string or a list of content blocks
-        if (msg.Content is string text)
-        {
-            Console.WriteLine($"User: {text}");
-        }
-        else if (msg.Content is IEnumerable<object> blocks)
+        if (msg.Content is IEnumerable<ContentBlock> blocks)
         {
             foreach (var block in blocks)
             {

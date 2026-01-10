@@ -1084,7 +1084,7 @@ public record UserMessage : Message
     /// Content can be a string or a list of content blocks.
     /// </summary>
     [JsonPropertyName("content")]
-    public required object Content { get; init; }
+    public required List<ContentBlock> Content { get; init; }
 
     [JsonPropertyName("uuid")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

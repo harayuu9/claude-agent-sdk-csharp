@@ -1,7 +1,7 @@
 using System.Text.Json;
 using ClaudeAgentSdk;
 
-namespace unit_test.E2E;
+namespace UnitTest.E2E;
 
 /// <summary>
 /// End-to-end tests for agents and setting sources with real Claude API calls.
