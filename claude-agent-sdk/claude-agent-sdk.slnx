@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="claude-agent-sdk/claude-agent-sdk.csproj" />
+  <Project Path="example/example.csproj" />
+  <Project Path="unit-test/unit-test.csproj" />
+</Solution>
