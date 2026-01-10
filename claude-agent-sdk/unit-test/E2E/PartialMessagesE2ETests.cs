@@ -17,7 +17,7 @@ public class PartialMessagesE2ETests : E2ETestBase
     [Fact]
     public async Task IncludePartialMessagesStreamEvents()
     {
-        if (ShouldSkipE2E(out var reason)) { return; }
+        SkipIfCannotRunE2E();
 
         var options = new ClaudeAgentOptions
         {
@@ -89,7 +89,7 @@ public class PartialMessagesE2ETests : E2ETestBase
     [Fact]
     public async Task IncludePartialMessagesThinkingDeltas()
     {
-        if (ShouldSkipE2E(out var reason)) { return; }
+        SkipIfCannotRunE2E();
 
         var options = new ClaudeAgentOptions
         {
@@ -147,7 +147,7 @@ public class PartialMessagesE2ETests : E2ETestBase
     [Fact]
     public async Task PartialMessagesDisabledByDefault()
     {
-        if (ShouldSkipE2E(out var reason)) { return; }
+        SkipIfCannotRunE2E();
 
         var options = new ClaudeAgentOptions
         {

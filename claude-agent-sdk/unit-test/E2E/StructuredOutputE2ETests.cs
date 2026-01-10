@@ -18,7 +18,7 @@ public class StructuredOutputE2ETests : E2ETestBase
     [Fact]
     public async Task SimpleStructuredOutput()
     {
-        if (ShouldSkipE2E(out var reason)) { return; }
+        SkipIfCannotRunE2E();
 
         // Define schema for file analysis
         var schema = new Dictionary<string, object?>
@@ -79,7 +79,7 @@ public class StructuredOutputE2ETests : E2ETestBase
     [Fact]
     public async Task NestedStructuredOutput()
     {
-        if (ShouldSkipE2E(out var reason)) { return; }
+        SkipIfCannotRunE2E();
 
         // Define a schema with nested structure
         var schema = new Dictionary<string, object?>
@@ -149,7 +149,7 @@ public class StructuredOutputE2ETests : E2ETestBase
     [Fact]
     public async Task StructuredOutputWithEnum()
     {
-        if (ShouldSkipE2E(out var reason)) { return; }
+        SkipIfCannotRunE2E();
 
         var schema = new Dictionary<string, object?>
         {
@@ -213,7 +213,7 @@ public class StructuredOutputE2ETests : E2ETestBase
     [Fact]
     public async Task StructuredOutputWithTools()
     {
-        if (ShouldSkipE2E(out var reason)) { return; }
+        SkipIfCannotRunE2E();
 
         // Schema for file analysis
         var schema = new Dictionary<string, object?>

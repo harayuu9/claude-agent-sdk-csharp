@@ -17,7 +17,7 @@ public class AgentsAndSettingsE2ETests : E2ETestBase
     [Fact]
     public async Task AgentDefinition()
     {
-        if (ShouldSkipE2E(out var reason)) { return; }
+        SkipIfCannotRunE2E();
 
         var options = new ClaudeAgentOptions
         {
@@ -58,7 +58,7 @@ public class AgentsAndSettingsE2ETests : E2ETestBase
     [Fact]
     public async Task FilesystemAgentLoading()
     {
-        if (ShouldSkipE2E(out var reason)) { return; }
+        SkipIfCannotRunE2E();
 
         var tmpDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         Directory.CreateDirectory(tmpDir);
@@ -145,7 +145,7 @@ public class AgentsAndSettingsE2ETests : E2ETestBase
     [Fact]
     public async Task SettingSourcesDefault()
     {
-        if (ShouldSkipE2E(out var reason)) { return; }
+        SkipIfCannotRunE2E();
 
         var tmpDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         Directory.CreateDirectory(tmpDir);
@@ -210,7 +210,7 @@ public class AgentsAndSettingsE2ETests : E2ETestBase
     [Fact]
     public async Task SettingSourcesUserOnly()
     {
-        if (ShouldSkipE2E(out var reason)) { return; }
+        SkipIfCannotRunE2E();
 
         var tmpDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         Directory.CreateDirectory(tmpDir);
@@ -280,7 +280,7 @@ public class AgentsAndSettingsE2ETests : E2ETestBase
     [Fact]
     public async Task SettingSourcesProjectIncluded()
     {
-        if (ShouldSkipE2E(out var reason)) { return; }
+        SkipIfCannotRunE2E();
 
         var tmpDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         Directory.CreateDirectory(tmpDir);

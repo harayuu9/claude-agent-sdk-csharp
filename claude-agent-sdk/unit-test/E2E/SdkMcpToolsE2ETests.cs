@@ -34,7 +34,7 @@ public class SdkMcpToolsE2ETests : E2ETestBase
     [Fact]
     public async Task SdkMcpToolExecution()
     {
-        if (ShouldSkipE2E(out var reason)) { return; }
+        SkipIfCannotRunE2E();
 
         var executions = new List<string>();
 
@@ -80,7 +80,7 @@ public class SdkMcpToolsE2ETests : E2ETestBase
     [Fact]
     public async Task SdkMcpPermissionEnforcement()
     {
-        if (ShouldSkipE2E(out var reason)) { return; }
+        SkipIfCannotRunE2E();
 
         var executions = new List<string>();
 
@@ -138,7 +138,7 @@ public class SdkMcpToolsE2ETests : E2ETestBase
     [Fact]
     public async Task SdkMcpMultipleTools()
     {
-        if (ShouldSkipE2E(out var reason)) { return; }
+        SkipIfCannotRunE2E();
 
         var executions = new List<string>();
 
@@ -195,7 +195,7 @@ public class SdkMcpToolsE2ETests : E2ETestBase
     [Fact]
     public async Task SdkMcpWithoutPermissions()
     {
-        if (ShouldSkipE2E(out var reason)) { return; }
+        SkipIfCannotRunE2E();
 
         var executions = new List<string>();
 

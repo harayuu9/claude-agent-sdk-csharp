@@ -16,7 +16,7 @@ public class ToolPermissionsE2ETests : E2ETestBase
     [Fact]
     public async Task PermissionCallbackGetsCalled()
     {
-        if (ShouldSkipE2E(out var reason)) { return; }
+        SkipIfCannotRunE2E();
 
         var callbackInvocations = new List<string>();
 
@@ -57,7 +57,7 @@ public class ToolPermissionsE2ETests : E2ETestBase
     [Fact]
     public async Task PermissionCallbackCanDeny()
     {
-        if (ShouldSkipE2E(out var reason)) { return; }
+        SkipIfCannotRunE2E();
 
         var callbackInvocations = new List<string>();
         var deniedTools = new List<string>();
@@ -106,7 +106,7 @@ public class ToolPermissionsE2ETests : E2ETestBase
     [Fact]
     public async Task PermissionCallbackReceivesInput()
     {
-        if (ShouldSkipE2E(out var reason)) { return; }
+        SkipIfCannotRunE2E();
 
         var capturedInputs = new List<(string ToolName, Dictionary<string, object?> Input)>();
 

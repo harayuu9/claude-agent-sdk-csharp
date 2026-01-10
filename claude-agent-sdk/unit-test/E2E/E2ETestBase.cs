@@ -21,45 +21,42 @@ public abstract class E2ETestBase
         }
 
         // Check if Claude CLI is available and logged in
-        return IsClaudeCliAvailable();
+        return IsClaudeCliLoggedIn();
     }
 
     /// <summary>
-    /// Checks if E2E tests should be skipped.
-    /// Returns true if tests should be skipped.
+    /// Skips the test if E2E tests cannot be run.
+    /// Throws SkipException to mark test as skipped (not failed, not passed).
     /// </summary>
-    protected static bool ShouldSkipE2E(out string reason)
+    protected static void SkipIfCannotRunE2E()
     {
         if (!CanRunE2ETests())
         {
-            reason = "E2E tests require ANTHROPIC_API_KEY environment variable or Claude CLI logged in (run 'claude auth')";
-            return true;
+            Assert.Skip("E2E tests require ANTHROPIC_API_KEY environment variable or Claude CLI logged in");
         }
-        reason = "";
-        return false;
     }
 
     /// <summary>
-    /// Checks if Claude CLI is installed and accessible.
+    /// Checks if Claude CLI is installed and logged in by attempting a simple request.
     /// </summary>
-    private static bool IsClaudeCliAvailable()
+    private static bool IsClaudeCliLoggedIn()
     {
         try
         {
+            var claudePath = GetClaudeCliPath();
             var startInfo = new ProcessStartInfo
             {
-                FileName = GetClaudeCliPath(),
-                Arguments = "--version",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
+                FileName = claudePath,
+                Arguments = "-p \"Say only: OK\" --max-turns 1",
+                UseShellExecute = true,  // Required for .cmd files on Windows
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden
             };
 
             using var process = Process.Start(startInfo);
             if (process == null) return false;
 
-            process.WaitForExit(5000);
+            process.WaitForExit(30000);
             return process.ExitCode == 0;
         }
         catch
@@ -80,12 +77,8 @@ public abstract class E2ETestBase
             return customPath;
         }
 
-        // Default paths based on platform
-        if (OperatingSystem.IsWindows())
-        {
-            return "claude.exe";
-        }
-
+        // On Windows, claude is typically installed as a .cmd file via npm
+        // Use "claude" without extension to let Windows resolve it
         return "claude";
     }
 

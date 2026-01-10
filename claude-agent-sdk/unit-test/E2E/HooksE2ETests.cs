@@ -16,7 +16,7 @@ public class HooksE2ETests : E2ETestBase
     [Fact]
     public async Task HookWithPermissionDecisionAndReason()
     {
-        if (ShouldSkipE2E(out var reason)) { return; }
+        SkipIfCannotRunE2E();
 
         var hookInvocations = new List<string>();
 
@@ -95,7 +95,7 @@ public class HooksE2ETests : E2ETestBase
     [Fact]
     public async Task HookWithContinueAndStopReason()
     {
-        if (ShouldSkipE2E(out var reason)) { return; }
+        SkipIfCannotRunE2E();
 
         var hookInvocations = new List<string>();
 
@@ -158,7 +158,7 @@ public class HooksE2ETests : E2ETestBase
     [Fact]
     public async Task HookWithAdditionalContext()
     {
-        if (ShouldSkipE2E(out var reason)) { return; }
+        SkipIfCannotRunE2E();
 
         var hookInvocations = new List<string>();
 

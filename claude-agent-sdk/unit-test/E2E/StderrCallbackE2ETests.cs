@@ -16,7 +16,7 @@ public class StderrCallbackE2ETests : E2ETestBase
     [Fact]
     public async Task StderrCallbackCapturesDebugOutput()
     {
-        if (ShouldSkipE2E(out var reason)) { return; }
+        SkipIfCannotRunE2E();
 
         var stderrLines = new List<string>();
 
@@ -53,7 +53,7 @@ public class StderrCallbackE2ETests : E2ETestBase
     [Fact]
     public async Task StderrCallbackWithoutDebug()
     {
-        if (ShouldSkipE2E(out var reason)) { return; }
+        SkipIfCannotRunE2E();
 
         var stderrLines = new List<string>();
 
