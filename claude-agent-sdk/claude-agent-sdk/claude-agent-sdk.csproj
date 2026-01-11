@@ -15,8 +15,8 @@
         <Authors>harayuu9</Authors>
         <Description>C# SDK for integrating with Claude Code CLI. A port of the official claude-agent-sdk-python.</Description>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <PackageProjectUrl>https://github.com/roudon/claude-agent-sdk-csharp</PackageProjectUrl>
-        <RepositoryUrl>https://github.com/roudon/claude-agent-sdk-csharp</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/harayuu9/claude-agent-sdk-csharp</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/harayuu9/claude-agent-sdk-csharp</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <PackageTags>claude;anthropic;ai;agent;sdk;mcp</PackageTags>
         <PackageReadmeFile>README.md</PackageReadmeFile>

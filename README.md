@@ -49,7 +49,7 @@ Install-Package ClaudeAgentSdk
 ### From Source
 
 ```bash
-git clone https://github.com/roudon/claude-agent-sdk-csharp.git
+git clone https://github.com/harayuu9/claude-agent-sdk-csharp.git
 cd claude-agent-sdk-csharp
 dotnet build
 ```
