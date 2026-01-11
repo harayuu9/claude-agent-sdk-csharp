@@ -75,21 +75,39 @@ internal class SubprocessCliTransport : Transport
 
         try
         {
+            var fileName = command[0];
+            var argStartIndex = 1;
+
+            // Windows .cmd/.bat files require cmd.exe /c to execute with UseShellExecute=false
+            var isWindowsBatchFile = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
+                (fileName.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase) ||
+                 fileName.EndsWith(".bat", StringComparison.OrdinalIgnoreCase));
+
+            if (isWindowsBatchFile)
+            {
+                fileName = "cmd.exe";
+                argStartIndex = 0; // Include original command in arguments
+            }
+
             var startInfo = new ProcessStartInfo
             {
-                FileName = command[0],
+                FileName = fileName,
                 UseShellExecute = false,
                 RedirectStandardInput = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = ShouldPipeStderr(),
                 CreateNoWindow = true,
                 WorkingDirectory = _cwd ?? Environment.CurrentDirectory,
-                StandardInputEncoding = Encoding.UTF8,
+                StandardInputEncoding = new UTF8Encoding(false),
                 StandardOutputEncoding = Encoding.UTF8,
             };
 
             // Add command arguments
-            for (var i = 1; i < command.Count; i++)
+            if (isWindowsBatchFile)
+            {
+                startInfo.ArgumentList.Add("/c");
+            }
+            for (var i = argStartIndex; i < command.Count; i++)
             {
                 startInfo.ArgumentList.Add(command[i]);
             }
