@@ -302,7 +302,7 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
                     break;
                 }
 
-                var msgType = message.GetValueOrDefault("type") as string;
+                var msgType = GetStringValue(message, "type");
 
                 switch (msgType)
                 {
@@ -361,27 +361,62 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
 
     private void HandleControlResponse(Dictionary<string, object?> message)
     {
-        if (message.GetValueOrDefault("response") is not Dictionary<string, object?> response)
+        var responseValue = message.GetValueOrDefault("response");
+        Dictionary<string, object?>? response = null;
+
+        if (responseValue is Dictionary<string, object?> dict)
+        {
+            response = dict;
+        }
+        else if (responseValue is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.Object)
+        {
+            response = JsonSerializer.Deserialize<Dictionary<string, object?>>(jsonElement.GetRawText());
+        }
+
+        if (response == null)
         {
             return;
         }
 
-        var requestId = response.GetValueOrDefault("request_id") as string;
+        var requestId = GetStringValue(response, "request_id");
         if (requestId == null || !_pendingControlResponses.TryRemove(requestId, out var tcs))
         {
             return;
         }
 
-        var subtype = response.GetValueOrDefault("subtype") as string;
+        var subtype = GetStringValue(response, "subtype");
         if (subtype == "error")
         {
-            var error = response.GetValueOrDefault("error") as string ?? "Unknown error";
+            var error = GetStringValue(response, "error") ?? "Unknown error";
             tcs.TrySetException(new ClaudeSDKException(error));
         }
         else
         {
             tcs.TrySetResult(response);
         }
+    }
+
+    /// <summary>
+    /// Helper method to get string value from dictionary, handling JsonElement.
+    /// </summary>
+    private static string? GetStringValue(Dictionary<string, object?>? dict, string key)
+    {
+        if (dict == null || !dict.TryGetValue(key, out var value))
+        {
+            return null;
+        }
+
+        if (value is string str)
+        {
+            return str;
+        }
+
+        if (value is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.String)
+        {
+            return jsonElement.GetString();
+        }
+
+        return value?.ToString();
     }
 
     #endregion
