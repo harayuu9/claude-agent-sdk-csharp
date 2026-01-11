@@ -42,7 +42,7 @@ public class StructuredOutputE2ETests : E2ETestBase
             },
             PermissionMode = PermissionMode.AcceptEdits,
             Model = "claude-haiku-4-5-20251001",
-            Cwd = "."  // Use current directory
+            Cwd = ProjectRoot  // Use project root directory
         };
 
         var ct = TestContext.Current.CancellationToken;
@@ -180,7 +180,7 @@ public class StructuredOutputE2ETests : E2ETestBase
                 ["schema"] = schema
             },
             PermissionMode = PermissionMode.AcceptEdits,
-            Cwd = "."
+            Cwd = ProjectRoot
         };
 
         var ct = TestContext.Current.CancellationToken;

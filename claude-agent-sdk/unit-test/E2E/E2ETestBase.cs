@@ -10,6 +10,40 @@ namespace UnitTest.E2E;
 public abstract class E2ETestBase
 {
     /// <summary>
+    /// Gets the project root directory (claude-agent-sdk folder).
+    /// Traverses upward from the test assembly location to find the project root.
+    /// </summary>
+    protected static string ProjectRoot { get; } = FindProjectRoot();
+
+    private static string FindProjectRoot()
+    {
+        // Start from the directory containing the test assembly
+        var dir = AppContext.BaseDirectory;
+
+        // Traverse up to find the directory containing claude-agent-sdk.csproj
+        while (!string.IsNullOrEmpty(dir))
+        {
+            var csprojPath = Path.Combine(dir, "claude-agent-sdk", "claude-agent-sdk.csproj");
+            if (File.Exists(csprojPath))
+            {
+                return dir;
+            }
+
+            // Also check if we're already in the project folder
+            csprojPath = Path.Combine(dir, "claude-agent-sdk.csproj");
+            if (File.Exists(csprojPath))
+            {
+                return Path.GetDirectoryName(dir) ?? dir;
+            }
+
+            dir = Path.GetDirectoryName(dir);
+        }
+
+        // Fallback to current directory if not found
+        return Directory.GetCurrentDirectory();
+    }
+
+    /// <summary>
     /// Checks if E2E tests can be run (API key set or CLI logged in).
     /// </summary>
     protected static bool CanRunE2ETests()
