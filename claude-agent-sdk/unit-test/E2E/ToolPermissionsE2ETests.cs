@@ -33,6 +33,7 @@ public class ToolPermissionsE2ETests : E2ETestBase
         var options = new ClaudeAgentOptions
         {
             CanUseTool = PermissionCallback,
+            PermissionMode = PermissionMode.Default,
             Model = DefaultTestModel
         };
 
@@ -87,6 +88,7 @@ public class ToolPermissionsE2ETests : E2ETestBase
         var options = new ClaudeAgentOptions
         {
             CanUseTool = PermissionCallback,
+            PermissionMode = PermissionMode.Default,
             Model = DefaultTestModel
         };
 
@@ -127,13 +129,14 @@ public class ToolPermissionsE2ETests : E2ETestBase
         var options = new ClaudeAgentOptions
         {
             CanUseTool = PermissionCallback,
+            PermissionMode = PermissionMode.Default,
             Model = DefaultTestModel
         };
 
         var ct = TestContext.Current.CancellationToken;
         await using var client = new ClaudeSDKClient(options);
         await client.ConnectAsync(ct: ct);
-        await client.QueryAsync("Read the file /tmp/test.txt", ct: ct);
+        await client.QueryAsync("Write 'hello world' to /tmp/test.txt", ct: ct);
 
         await foreach (var message in client.ReceiveResponseAsync(ct))
         {
@@ -143,11 +146,11 @@ public class ToolPermissionsE2ETests : E2ETestBase
         // Verify callback received input data
         Assert.NotEmpty(capturedInputs);
 
-        // Find Read tool invocation and check it has input
-        var readInvocation = capturedInputs.FirstOrDefault(x => x.ToolName == "Read");
-        if (readInvocation != default)
+        // Find Write tool invocation and check it has input
+        var writeInvocation = capturedInputs.FirstOrDefault(x => x.ToolName == "Write");
+        if (writeInvocation != default)
         {
-            Assert.NotNull(readInvocation.Input);
+            Assert.NotNull(writeInvocation.Input);
         }
     }
 }
