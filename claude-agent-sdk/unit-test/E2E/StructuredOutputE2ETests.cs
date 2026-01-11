@@ -41,7 +41,7 @@ public class StructuredOutputE2ETests : E2ETestBase
                 ["schema"] = schema
             },
             PermissionMode = PermissionMode.AcceptEdits,
-            Model = "claude-haiku-4-5-20251001",
+            Model = DefaultTestModel,
             Cwd = ProjectRoot  // Use project root directory
         };
 
@@ -116,7 +116,8 @@ public class StructuredOutputE2ETests : E2ETestBase
                 ["type"] = "json_schema",
                 ["schema"] = schema
             },
-            PermissionMode = PermissionMode.AcceptEdits
+            PermissionMode = PermissionMode.AcceptEdits,
+            Model = DefaultTestModel
         };
 
         var ct = TestContext.Current.CancellationToken;
@@ -180,7 +181,8 @@ public class StructuredOutputE2ETests : E2ETestBase
                 ["schema"] = schema
             },
             PermissionMode = PermissionMode.AcceptEdits,
-            Cwd = ProjectRoot
+            Cwd = ProjectRoot,
+            Model = DefaultTestModel
         };
 
         var ct = TestContext.Current.CancellationToken;
@@ -242,7 +244,8 @@ public class StructuredOutputE2ETests : E2ETestBase
                 ["schema"] = schema
             },
             PermissionMode = PermissionMode.AcceptEdits,
-            Cwd = Path.GetTempPath()  // Cross-platform temp directory
+            Cwd = Path.GetTempPath(),  // Cross-platform temp directory
+            Model = DefaultTestModel
         };
 
         var ct = TestContext.Current.CancellationToken;

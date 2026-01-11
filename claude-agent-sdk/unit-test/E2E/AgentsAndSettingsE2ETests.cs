@@ -31,7 +31,8 @@ public class AgentsAndSettingsE2ETests : E2ETestBase
                     Model = AgentModel.Sonnet
                 }
             },
-            MaxTurns = 1
+            MaxTurns = 1,
+            Model = DefaultTestModel
         };
 
         var ct = TestContext.Current.CancellationToken;
@@ -88,7 +89,8 @@ public class AgentsAndSettingsE2ETests : E2ETestBase
             {
                 SettingSources = [SettingSource.Project],
                 Cwd = tmpDir,
-                MaxTurns = 1
+                MaxTurns = 1,
+                Model = DefaultTestModel
             };
             var ct = TestContext.Current.CancellationToken;
 
@@ -166,7 +168,8 @@ public class AgentsAndSettingsE2ETests : E2ETestBase
             var options = new ClaudeAgentOptions
             {
                 Cwd = tmpDir,
-                MaxTurns = 1
+                MaxTurns = 1,
+                Model = DefaultTestModel
             };
             var ct = TestContext.Current.CancellationToken;
 
@@ -238,7 +241,8 @@ public class AgentsAndSettingsE2ETests : E2ETestBase
             {
                 SettingSources = [SettingSource.User],
                 Cwd = tmpDir,
-                MaxTurns = 1
+                MaxTurns = 1,
+                Model = DefaultTestModel
             };
             var ct = TestContext.Current.CancellationToken;
 
@@ -304,7 +308,8 @@ public class AgentsAndSettingsE2ETests : E2ETestBase
             {
                 SettingSources = [SettingSource.User, SettingSource.Project, SettingSource.Local],
                 Cwd = tmpDir,
-                MaxTurns = 1
+                MaxTurns = 1,
+                Model = DefaultTestModel
             };
             var ct = TestContext.Current.CancellationToken;
 

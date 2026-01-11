@@ -419,14 +419,37 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
         return value?.ToString();
     }
 
+    /// <summary>
+    /// Helper method to get dictionary value from dictionary, handling JsonElement.
+    /// </summary>
+    private static Dictionary<string, object?>? GetDictionaryValue(Dictionary<string, object?>? dict, string key)
+    {
+        if (dict == null || !dict.TryGetValue(key, out var value))
+        {
+            return null;
+        }
+
+        if (value is Dictionary<string, object?> dictValue)
+        {
+            return dictValue;
+        }
+
+        if (value is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.Object)
+        {
+            return JsonSerializer.Deserialize<Dictionary<string, object?>>(jsonElement.GetRawText());
+        }
+
+        return null;
+    }
+
     #endregion
 
     #region Control Request Handling
 
     private async Task HandleControlRequestAsync(Dictionary<string, object?> request)
     {
-        var requestId = request.GetValueOrDefault("request_id") as string ?? "";
-        var requestData = request.GetValueOrDefault("request") as Dictionary<string, object?>;
+        var requestId = GetStringValue(request, "request_id") ?? "";
+        var requestData = GetDictionaryValue(request, "request");
 
         if (requestData == null)
         {
@@ -434,7 +457,7 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
             return;
         }
 
-        var subtype = requestData.GetValueOrDefault("subtype") as string;
+        var subtype = GetStringValue(requestData, "subtype");
 
         try
         {
@@ -461,8 +484,8 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
             throw new InvalidOperationException("canUseTool callback is not provided");
         }
 
-        var toolName = requestData.GetValueOrDefault("tool_name") as string ?? "";
-        var originalInput = requestData.GetValueOrDefault("input") as Dictionary<string, object?> ?? new();
+        var toolName = GetStringValue(requestData, "tool_name") ?? "";
+        var originalInput = GetDictionaryValue(requestData, "input") ?? new();
 
         var permissionSuggestions = new List<PermissionUpdate>();
         if (requestData.GetValueOrDefault("permission_suggestions") is List<object?> suggestions)
@@ -510,7 +533,7 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
 
     private async Task<Dictionary<string, object?>> HandleHookCallbackAsync(Dictionary<string, object?> requestData)
     {
-        var callbackId = requestData.GetValueOrDefault("callback_id") as string ?? "";
+        var callbackId = GetStringValue(requestData, "callback_id") ?? "";
 
         if (!_hookCallbacks.TryGetValue(callbackId, out var callback))
         {
@@ -518,7 +541,7 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
         }
 
         var input = ParseHookInput(requestData.GetValueOrDefault("input"));
-        var toolUseId = requestData.GetValueOrDefault("tool_use_id") as string;
+        var toolUseId = GetStringValue(requestData, "tool_use_id");
 
         var hookOutput = await callback(input, toolUseId, new HookContext { Signal = null });
 
@@ -527,13 +550,26 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
 
     private static BaseHookInput ParseHookInput(object? inputObj)
     {
-        if (inputObj is not Dictionary<string, object?> input)
+        Dictionary<string, object?>? input = null;
+        string? json = null;
+
+        if (inputObj is Dictionary<string, object?> dictInput)
+        {
+            input = dictInput;
+            json = JsonSerializer.Serialize(input);
+        }
+        else if (inputObj is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.Object)
+        {
+            json = jsonElement.GetRawText();
+            input = JsonSerializer.Deserialize<Dictionary<string, object?>>(json);
+        }
+
+        if (input == null || json == null)
         {
             throw new InvalidOperationException("Hook input is not a valid dictionary");
         }
 
-        var hookEventName = input.GetValueOrDefault("hook_event_name") as string;
-        var json = JsonSerializer.Serialize(input);
+        var hookEventName = GetStringValue(input, "hook_event_name");
 
         return hookEventName switch
         {
@@ -560,8 +596,8 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
 
     private async Task<Dictionary<string, object?>> HandleMcpMessageAsync(Dictionary<string, object?> requestData)
     {
-        var serverName = requestData.GetValueOrDefault("server_name") as string;
-        var message = requestData.GetValueOrDefault("message") as Dictionary<string, object?>;
+        var serverName = GetStringValue(requestData, "server_name");
+        var message = GetDictionaryValue(requestData, "message");
 
         if (string.IsNullOrEmpty(serverName) || message == null)
         {
@@ -593,8 +629,8 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
             };
         }
 
-        var method = message.GetValueOrDefault("method") as string;
-        var @params = message.GetValueOrDefault("params") as Dictionary<string, object?> ?? new();
+        var method = GetStringValue(message, "method");
+        var @params = GetDictionaryValue(message, "params") ?? new();
 
         try
         {
@@ -682,8 +718,8 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
     private static async Task<Dictionary<string, object?>> HandleMcpToolsCallAsync(
         Dictionary<string, object?> message, ISdkMcpServer server, Dictionary<string, object?> @params)
     {
-        var toolName = @params.GetValueOrDefault("name") as string ?? "";
-        var arguments = @params.GetValueOrDefault("arguments") as Dictionary<string, object?> ?? new();
+        var toolName = GetStringValue(@params, "name") ?? "";
+        var arguments = GetDictionaryValue(@params, "arguments") ?? new();
 
         var result = await server.CallToolAsync(toolName, arguments);
 

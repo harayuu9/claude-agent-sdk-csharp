@@ -32,7 +32,9 @@ public class StderrCallbackE2ETests : E2ETestBase
             ExtraArgs = new Dictionary<string, string?>
             {
                 ["debug-to-stderr"] = null  // Flag without value
-            }
+            },
+            Model = DefaultTestModel,
+            MaxTurns = 1
         };
 
         // Run a simple query
@@ -65,7 +67,9 @@ public class StderrCallbackE2ETests : E2ETestBase
         // No debug mode enabled
         var options = new ClaudeAgentOptions
         {
-            Stderr = CaptureStderr
+            Stderr = CaptureStderr,
+            Model = DefaultTestModel,
+            MaxTurns = 1
         };
 
         // Run a simple query

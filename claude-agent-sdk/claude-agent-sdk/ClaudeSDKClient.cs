@@ -151,8 +151,15 @@ public sealed class ClaudeSDKClient : IAsyncDisposable
         var configuredOptions = ValidateAndConfigureOptions(_options, prompt);
 
         // Create transport
-        // When prompt is null, use empty stream for streaming mode
-        var effectivePrompt = prompt ?? EmptyInputStream();
+        // ClaudeSDKClient always uses streaming mode for bidirectional communication
+        // Always pass IAsyncEnumerable to transport to ensure streaming mode
+        // (string prompts are streamed later via StreamInputAsync)
+        var effectivePrompt = prompt switch
+        {
+            null => EmptyInputStream(),
+            string => EmptyInputStream(),
+            _ => prompt
+        };
         _transport = _customTransport ?? new SubprocessCliTransport(effectivePrompt, configuredOptions);
         await _transport.ConnectAsync(ct);
 

@@ -20,7 +20,8 @@ public class DynamicControlE2ETests : E2ETestBase
 
         var options = new ClaudeAgentOptions
         {
-            PermissionMode = PermissionMode.Default
+            PermissionMode = PermissionMode.Default,
+            Model = DefaultTestModel
         };
 
         var ct = TestContext.Current.CancellationToken;
@@ -103,7 +104,10 @@ public class DynamicControlE2ETests : E2ETestBase
     {
         SkipIfCannotRunE2E();
 
-        var options = new ClaudeAgentOptions();
+        var options = new ClaudeAgentOptions
+        {
+            Model = DefaultTestModel
+        };
         var ct = TestContext.Current.CancellationToken;
 
         await using var client = new ClaudeSDKClient(options);

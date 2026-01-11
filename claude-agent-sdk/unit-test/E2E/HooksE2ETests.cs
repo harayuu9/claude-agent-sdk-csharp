@@ -73,7 +73,8 @@ public class HooksE2ETests : E2ETestBase
                         Hooks = [TestHook]
                     }
                 ]
-            }
+            },
+            Model = DefaultTestModel
         };
 
         var ct = TestContext.Current.CancellationToken;
@@ -137,7 +138,8 @@ public class HooksE2ETests : E2ETestBase
                         Hooks = [PostToolHook]
                     }
                 ]
-            }
+            },
+            Model = DefaultTestModel
         };
 
         var ct = TestContext.Current.CancellationToken;
@@ -197,7 +199,8 @@ public class HooksE2ETests : E2ETestBase
                         Hooks = [ContextHook]
                     }
                 ]
-            }
+            },
+            Model = DefaultTestModel
         };
 
         var ct = TestContext.Current.CancellationToken;

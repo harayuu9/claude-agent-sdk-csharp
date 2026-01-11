@@ -22,7 +22,7 @@ public class PartialMessagesE2ETests : E2ETestBase
         var options = new ClaudeAgentOptions
         {
             IncludePartialMessages = true,
-            Model = "claude-sonnet-4-5",
+            Model = DefaultTestModel,
             MaxTurns = 2,
             Env = new Dictionary<string, string>
             {
@@ -95,7 +95,7 @@ public class PartialMessagesE2ETests : E2ETestBase
         var options = new ClaudeAgentOptions
         {
             IncludePartialMessages = true,
-            Model = "claude-sonnet-4-5",
+            Model = DefaultTestModel,
             MaxTurns = 2,
             Env = new Dictionary<string, string>
             {
@@ -154,7 +154,7 @@ public class PartialMessagesE2ETests : E2ETestBase
         var options = new ClaudeAgentOptions
         {
             // IncludePartialMessages not set (defaults to false)
-            Model = "claude-sonnet-4-5",
+            Model = DefaultTestModel,
             MaxTurns = 2
         };
 

@@ -15,6 +15,14 @@ public abstract class E2ETestBase
     /// </summary>
     protected static string ProjectRoot { get; } = FindProjectRoot();
 
+    /// <summary>
+    /// Default model for E2E tests - uses Haiku for cost efficiency.
+    /// Override with E2E_TEST_MODEL environment variable if needed.
+    /// </summary>
+    protected static string DefaultTestModel { get; } =
+        Environment.GetEnvironmentVariable("E2E_TEST_MODEL")
+        ?? "claude-haiku-4-5-20251001";
+
     private static string FindProjectRoot()
     {
         // Start from the directory containing the test assembly
@@ -71,30 +79,49 @@ public abstract class E2ETestBase
     }
 
     /// <summary>
+    /// Cache for IsClaudeCliLoggedIn result to avoid multiple API calls.
+    /// </summary>
+    private static bool? _isClaudeCliLoggedInCache;
+
+    /// <summary>
     /// Checks if Claude CLI is installed and logged in by attempting a simple request.
+    /// Results are cached to minimize API calls during test runs.
     /// </summary>
     private static bool IsClaudeCliLoggedIn()
     {
+        // Return cached result if available
+        if (_isClaudeCliLoggedInCache.HasValue)
+        {
+            return _isClaudeCliLoggedInCache.Value;
+        }
+
         try
         {
             var claudePath = GetClaudeCliPath();
             var startInfo = new ProcessStartInfo
             {
                 FileName = claudePath,
-                Arguments = "-p \"Say only: OK\" --max-turns 1",
+                // Use Haiku model for cost efficiency
+                Arguments = "-p \"Say only: OK\" --max-turns 1 --model claude-haiku-4-5-20251001",
                 UseShellExecute = true,  // Required for .cmd files on Windows
                 CreateNoWindow = true,
                 WindowStyle = ProcessWindowStyle.Hidden
             };
 
             using var process = Process.Start(startInfo);
-            if (process == null) return false;
+            if (process == null)
+            {
+                _isClaudeCliLoggedInCache = false;
+                return false;
+            }
 
             process.WaitForExit(30000);
-            return process.ExitCode == 0;
+            _isClaudeCliLoggedInCache = process.ExitCode == 0;
+            return _isClaudeCliLoggedInCache.Value;
         }
         catch
         {
+            _isClaudeCliLoggedInCache = false;
             return false;
         }
     }

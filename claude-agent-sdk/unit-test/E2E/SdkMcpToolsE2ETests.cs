@@ -58,7 +58,8 @@ public class SdkMcpToolsE2ETests : E2ETestBase
             {
                 ["test"] = serverConfig
             },
-            AllowedTools = ["mcp__test__echo"]
+            AllowedTools = ["mcp__test__echo"],
+            Model = DefaultTestModel
         };
 
         var ct = TestContext.Current.CancellationToken;
@@ -115,7 +116,8 @@ public class SdkMcpToolsE2ETests : E2ETestBase
                 ["test"] = serverConfig
             },
             DisallowedTools = ["mcp__test__echo"],  // Block echo tool
-            AllowedTools = ["mcp__test__greet"]     // But allow greet
+            AllowedTools = ["mcp__test__greet"],    // But allow greet
+            Model = DefaultTestModel
         };
 
         var ct = TestContext.Current.CancellationToken;
@@ -173,7 +175,8 @@ public class SdkMcpToolsE2ETests : E2ETestBase
             {
                 ["multi"] = serverConfig
             },
-            AllowedTools = ["mcp__multi__echo", "mcp__multi__greet"]
+            AllowedTools = ["mcp__multi__echo", "mcp__multi__greet"],
+            Model = DefaultTestModel
         };
 
         var ct = TestContext.Current.CancellationToken;
@@ -222,7 +225,8 @@ public class SdkMcpToolsE2ETests : E2ETestBase
             McpServers = new Dictionary<string, McpServerConfig>
             {
                 ["noperm"] = serverConfig
-            }
+            },
+            Model = DefaultTestModel
         };
 
         var ct = TestContext.Current.CancellationToken;

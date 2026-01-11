@@ -32,7 +32,8 @@ public class ToolPermissionsE2ETests : E2ETestBase
 
         var options = new ClaudeAgentOptions
         {
-            CanUseTool = PermissionCallback
+            CanUseTool = PermissionCallback,
+            Model = DefaultTestModel
         };
 
         var ct = TestContext.Current.CancellationToken;
@@ -85,7 +86,8 @@ public class ToolPermissionsE2ETests : E2ETestBase
 
         var options = new ClaudeAgentOptions
         {
-            CanUseTool = PermissionCallback
+            CanUseTool = PermissionCallback,
+            Model = DefaultTestModel
         };
 
         var ct = TestContext.Current.CancellationToken;
@@ -124,7 +126,8 @@ public class ToolPermissionsE2ETests : E2ETestBase
 
         var options = new ClaudeAgentOptions
         {
-            CanUseTool = PermissionCallback
+            CanUseTool = PermissionCallback,
+            Model = DefaultTestModel
         };
 
         var ct = TestContext.Current.CancellationToken;
