@@ -11,13 +11,13 @@ namespace ClaudeAgentSdk;
 [JsonConverter(typeof(JsonStringEnumConverter<PermissionMode>))]
 public enum PermissionMode
 {
-    [JsonPropertyName("default")]
+    [JsonStringEnumMemberName("default")]
     Default,
-    [JsonPropertyName("acceptEdits")]
+    [JsonStringEnumMemberName("acceptEdits")]
     AcceptEdits,
-    [JsonPropertyName("plan")]
+    [JsonStringEnumMemberName("plan")]
     Plan,
-    [JsonPropertyName("bypassPermissions")]
+    [JsonStringEnumMemberName("bypassPermissions")]
     BypassPermissions
 }
 
@@ -27,7 +27,7 @@ public enum PermissionMode
 [JsonConverter(typeof(JsonStringEnumConverter<SdkBeta>))]
 public enum SdkBeta
 {
-    [JsonPropertyName("context-1m-2025-08-07")]
+    [JsonStringEnumMemberName("context-1m-2025-08-07")]
     Context1M_2025_08_07
 }
 
@@ -37,11 +37,11 @@ public enum SdkBeta
 [JsonConverter(typeof(JsonStringEnumConverter<SettingSource>))]
 public enum SettingSource
 {
-    [JsonPropertyName("user")]
+    [JsonStringEnumMemberName("user")]
     User,
-    [JsonPropertyName("project")]
+    [JsonStringEnumMemberName("project")]
     Project,
-    [JsonPropertyName("local")]
+    [JsonStringEnumMemberName("local")]
     Local
 }
 
@@ -51,13 +51,13 @@ public enum SettingSource
 [JsonConverter(typeof(JsonStringEnumConverter<PermissionUpdateDestination>))]
 public enum PermissionUpdateDestination
 {
-    [JsonPropertyName("userSettings")]
+    [JsonStringEnumMemberName("userSettings")]
     UserSettings,
-    [JsonPropertyName("projectSettings")]
+    [JsonStringEnumMemberName("projectSettings")]
     ProjectSettings,
-    [JsonPropertyName("localSettings")]
+    [JsonStringEnumMemberName("localSettings")]
     LocalSettings,
-    [JsonPropertyName("session")]
+    [JsonStringEnumMemberName("session")]
     Session
 }
 
@@ -67,11 +67,11 @@ public enum PermissionUpdateDestination
 [JsonConverter(typeof(JsonStringEnumConverter<PermissionBehavior>))]
 public enum PermissionBehavior
 {
-    [JsonPropertyName("allow")]
+    [JsonStringEnumMemberName("allow")]
     Allow,
-    [JsonPropertyName("deny")]
+    [JsonStringEnumMemberName("deny")]
     Deny,
-    [JsonPropertyName("ask")]
+    [JsonStringEnumMemberName("ask")]
     Ask
 }
 
@@ -82,17 +82,17 @@ public enum PermissionBehavior
 [JsonConverter(typeof(JsonStringEnumConverter<HookEvent>))]
 public enum HookEvent
 {
-    [JsonPropertyName("PreToolUse")]
+    [JsonStringEnumMemberName("PreToolUse")]
     PreToolUse,
-    [JsonPropertyName("PostToolUse")]
+    [JsonStringEnumMemberName("PostToolUse")]
     PostToolUse,
-    [JsonPropertyName("UserPromptSubmit")]
+    [JsonStringEnumMemberName("UserPromptSubmit")]
     UserPromptSubmit,
-    [JsonPropertyName("Stop")]
+    [JsonStringEnumMemberName("Stop")]
     Stop,
-    [JsonPropertyName("SubagentStop")]
+    [JsonStringEnumMemberName("SubagentStop")]
     SubagentStop,
-    [JsonPropertyName("PreCompact")]
+    [JsonStringEnumMemberName("PreCompact")]
     PreCompact
 }
 
@@ -102,17 +102,17 @@ public enum HookEvent
 [JsonConverter(typeof(JsonStringEnumConverter<AssistantMessageError>))]
 public enum AssistantMessageError
 {
-    [JsonPropertyName("authentication_failed")]
+    [JsonStringEnumMemberName("authentication_failed")]
     AuthenticationFailed,
-    [JsonPropertyName("billing_error")]
+    [JsonStringEnumMemberName("billing_error")]
     BillingError,
-    [JsonPropertyName("rate_limit")]
+    [JsonStringEnumMemberName("rate_limit")]
     RateLimit,
-    [JsonPropertyName("invalid_request")]
+    [JsonStringEnumMemberName("invalid_request")]
     InvalidRequest,
-    [JsonPropertyName("server_error")]
+    [JsonStringEnumMemberName("server_error")]
     ServerError,
-    [JsonPropertyName("unknown")]
+    [JsonStringEnumMemberName("unknown")]
     Unknown
 }
 
@@ -122,17 +122,17 @@ public enum AssistantMessageError
 [JsonConverter(typeof(JsonStringEnumConverter<PermissionUpdateType>))]
 public enum PermissionUpdateType
 {
-    [JsonPropertyName("addRules")]
+    [JsonStringEnumMemberName("addRules")]
     AddRules,
-    [JsonPropertyName("replaceRules")]
+    [JsonStringEnumMemberName("replaceRules")]
     ReplaceRules,
-    [JsonPropertyName("removeRules")]
+    [JsonStringEnumMemberName("removeRules")]
     RemoveRules,
-    [JsonPropertyName("setMode")]
+    [JsonStringEnumMemberName("setMode")]
     SetMode,
-    [JsonPropertyName("addDirectories")]
+    [JsonStringEnumMemberName("addDirectories")]
     AddDirectories,
-    [JsonPropertyName("removeDirectories")]
+    [JsonStringEnumMemberName("removeDirectories")]
     RemoveDirectories
 }
 
@@ -142,13 +142,13 @@ public enum PermissionUpdateType
 [JsonConverter(typeof(JsonStringEnumConverter<AgentModel>))]
 public enum AgentModel
 {
-    [JsonPropertyName("sonnet")]
+    [JsonStringEnumMemberName("sonnet")]
     Sonnet,
-    [JsonPropertyName("opus")]
+    [JsonStringEnumMemberName("opus")]
     Opus,
-    [JsonPropertyName("haiku")]
+    [JsonStringEnumMemberName("haiku")]
     Haiku,
-    [JsonPropertyName("inherit")]
+    [JsonStringEnumMemberName("inherit")]
     Inherit
 }
 
@@ -158,9 +158,9 @@ public enum AgentModel
 [JsonConverter(typeof(JsonStringEnumConverter<PreCompactTrigger>))]
 public enum PreCompactTrigger
 {
-    [JsonPropertyName("manual")]
+    [JsonStringEnumMemberName("manual")]
     Manual,
-    [JsonPropertyName("auto")]
+    [JsonStringEnumMemberName("auto")]
     Auto
 }
 
@@ -170,7 +170,7 @@ public enum PreCompactTrigger
 [JsonConverter(typeof(JsonStringEnumConverter<SdkPluginType>))]
 public enum SdkPluginType
 {
-    [JsonPropertyName("local")]
+    [JsonStringEnumMemberName("local")]
     Local
 }
 
@@ -180,13 +180,13 @@ public enum SdkPluginType
 [JsonConverter(typeof(JsonStringEnumConverter<McpServerType>))]
 public enum McpServerType
 {
-    [JsonPropertyName("stdio")]
+    [JsonStringEnumMemberName("stdio")]
     Stdio,
-    [JsonPropertyName("sse")]
+    [JsonStringEnumMemberName("sse")]
     Sse,
-    [JsonPropertyName("http")]
+    [JsonStringEnumMemberName("http")]
     Http,
-    [JsonPropertyName("sdk")]
+    [JsonStringEnumMemberName("sdk")]
     Sdk
 }
 
