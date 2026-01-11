@@ -34,12 +34,13 @@ public class AgentsAndSettingsE2ETests : E2ETestBase
             MaxTurns = 1
         };
 
+        var ct = TestContext.Current.CancellationToken;
         await using var client = new ClaudeSDKClient(options);
-        await client.ConnectAsync();
-        await client.QueryAsync("What is 2 + 2?");
+        await client.ConnectAsync(ct: ct);
+        await client.QueryAsync("What is 2 + 2?", ct: ct);
 
         // Check that agent is available in init message
-        await foreach (var message in client.ReceiveResponseAsync())
+        await foreach (var message in client.ReceiveResponseAsync(ct))
         {
             if (message is SystemMessage systemMessage && systemMessage.Subtype == "init")
             {
@@ -89,13 +90,14 @@ public class AgentsAndSettingsE2ETests : E2ETestBase
                 Cwd = tmpDir,
                 MaxTurns = 1
             };
+            var ct = TestContext.Current.CancellationToken;
 
             var messages = new List<Message>();
             await using var client = new ClaudeSDKClient(options);
-            await client.ConnectAsync();
-            await client.QueryAsync("Say hello in exactly 3 words");
+            await client.ConnectAsync(ct: ct);
+            await client.QueryAsync("Say hello in exactly 3 words", ct: ct);
 
-            await foreach (var msg in client.ReceiveResponseAsync())
+            await foreach (var msg in client.ReceiveResponseAsync(ct))
             {
                 messages.Add(msg);
             }
@@ -121,7 +123,7 @@ public class AgentsAndSettingsE2ETests : E2ETestBase
             // On Windows, wait for file handles to be released before cleanup
             if (OperatingSystem.IsWindows())
             {
-                await Task.Delay(500);
+                await Task.Delay(500, ct);
             }
         }
         finally
@@ -166,13 +168,14 @@ public class AgentsAndSettingsE2ETests : E2ETestBase
                 Cwd = tmpDir,
                 MaxTurns = 1
             };
+            var ct = TestContext.Current.CancellationToken;
 
             await using var client = new ClaudeSDKClient(options);
-            await client.ConnectAsync();
-            await client.QueryAsync("What is 2 + 2?");
+            await client.ConnectAsync(ct: ct);
+            await client.QueryAsync("What is 2 + 2?", ct: ct);
 
             // Check that settings were NOT loaded
-            await foreach (var message in client.ReceiveResponseAsync())
+            await foreach (var message in client.ReceiveResponseAsync(ct))
             {
                 if (message is SystemMessage systemMessage && systemMessage.Subtype == "init")
                 {
@@ -186,7 +189,7 @@ public class AgentsAndSettingsE2ETests : E2ETestBase
             // On Windows, wait for file handles to be released before cleanup
             if (OperatingSystem.IsWindows())
             {
-                await Task.Delay(500);
+                await Task.Delay(500, ct);
             }
         }
         finally
@@ -237,13 +240,14 @@ public class AgentsAndSettingsE2ETests : E2ETestBase
                 Cwd = tmpDir,
                 MaxTurns = 1
             };
+            var ct = TestContext.Current.CancellationToken;
 
             await using var client = new ClaudeSDKClient(options);
-            await client.ConnectAsync();
-            await client.QueryAsync("What is 2 + 2?");
+            await client.ConnectAsync(ct: ct);
+            await client.QueryAsync("What is 2 + 2?", ct: ct);
 
             // Check that project command is NOT available
-            await foreach (var message in client.ReceiveResponseAsync())
+            await foreach (var message in client.ReceiveResponseAsync(ct))
             {
                 if (message is SystemMessage systemMessage && systemMessage.Subtype == "init")
                 {
@@ -256,7 +260,7 @@ public class AgentsAndSettingsE2ETests : E2ETestBase
             // On Windows, wait for file handles to be released before cleanup
             if (OperatingSystem.IsWindows())
             {
-                await Task.Delay(500);
+                await Task.Delay(500, ct);
             }
         }
         finally
@@ -302,13 +306,14 @@ public class AgentsAndSettingsE2ETests : E2ETestBase
                 Cwd = tmpDir,
                 MaxTurns = 1
             };
+            var ct = TestContext.Current.CancellationToken;
 
             await using var client = new ClaudeSDKClient(options);
-            await client.ConnectAsync();
-            await client.QueryAsync("What is 2 + 2?");
+            await client.ConnectAsync(ct: ct);
+            await client.QueryAsync("What is 2 + 2?", ct: ct);
 
             // Check that settings WERE loaded
-            await foreach (var message in client.ReceiveResponseAsync())
+            await foreach (var message in client.ReceiveResponseAsync(ct))
             {
                 if (message is SystemMessage systemMessage && systemMessage.Subtype == "init")
                 {
@@ -321,7 +326,7 @@ public class AgentsAndSettingsE2ETests : E2ETestBase
             // On Windows, wait for file handles to be released before cleanup
             if (OperatingSystem.IsWindows())
             {
-                await Task.Delay(500);
+                await Task.Delay(500, ct);
             }
         }
         finally

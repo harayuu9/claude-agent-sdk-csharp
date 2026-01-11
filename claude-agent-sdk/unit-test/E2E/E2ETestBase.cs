@@ -95,10 +95,10 @@ public abstract class E2ETestBase
     /// <summary>
     /// Collects all messages from a ClaudeSDKClient response until ResultMessage.
     /// </summary>
-    protected static async Task<List<Message>> CollectMessagesAsync(ClaudeSDKClient client)
+    protected static async Task<List<Message>> CollectMessagesAsync(ClaudeSDKClient client, CancellationToken ct = default)
     {
         var messages = new List<Message>();
-        await foreach (var message in client.ReceiveResponseAsync())
+        await foreach (var message in client.ReceiveResponseAsync(ct))
         {
             messages.Add(message);
         }

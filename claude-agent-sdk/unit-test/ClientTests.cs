@@ -44,7 +44,7 @@ public class ClientTests
 
         // Act
         var messages = new List<Message>();
-        await foreach (var msg in Query.RunAsync("What is 2+2?", transport: transport))
+        await foreach (var msg in Query.RunAsync("What is 2+2?", transport: transport, cancellationToken: TestContext.Current.CancellationToken))
         {
             messages.Add(msg);
         }
@@ -100,7 +100,7 @@ public class ClientTests
 
         // Act
         var messages = new List<Message>();
-        await foreach (var msg in Query.RunAsync("Hi", options, transport))
+        await foreach (var msg in Query.RunAsync("Hi", options, transport, cancellationToken: TestContext.Current.CancellationToken))
         {
             messages.Add(msg);
         }
@@ -148,7 +148,7 @@ public class ClientTests
 
         // Act
         var messages = new List<Message>();
-        await foreach (var msg in Query.RunAsync("test", options, transport))
+        await foreach (var msg in Query.RunAsync("test", options, transport, cancellationToken: TestContext.Current.CancellationToken))
         {
             messages.Add(msg);
         }

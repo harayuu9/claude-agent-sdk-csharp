@@ -143,7 +143,7 @@ public class SubprocessBufferingTests
         try
         {
             var messages = new List<Dictionary<string, object?>>();
-            await foreach (var msg in transport.ReadMessagesAsync())
+            await foreach (var msg in transport.ReadMessagesAsync(TestContext.Current.CancellationToken))
             {
                 messages.Add(msg);
             }
@@ -185,7 +185,7 @@ public class SubprocessBufferingTests
         try
         {
             var messages = new List<Dictionary<string, object?>>();
-            await foreach (var msg in transport.ReadMessagesAsync())
+            await foreach (var msg in transport.ReadMessagesAsync(TestContext.Current.CancellationToken))
             {
                 messages.Add(msg);
             }
@@ -223,7 +223,7 @@ public class SubprocessBufferingTests
         try
         {
             var messages = new List<Dictionary<string, object?>>();
-            await foreach (var msg in transport.ReadMessagesAsync())
+            await foreach (var msg in transport.ReadMessagesAsync(TestContext.Current.CancellationToken))
             {
                 messages.Add(msg);
             }
@@ -280,7 +280,7 @@ public class SubprocessBufferingTests
         try
         {
             var messages = new List<Dictionary<string, object?>>();
-            await foreach (var msg in transport.ReadMessagesAsync())
+            await foreach (var msg in transport.ReadMessagesAsync(TestContext.Current.CancellationToken))
             {
                 messages.Add(msg);
             }
@@ -347,7 +347,7 @@ public class SubprocessBufferingTests
         try
         {
             var messages = new List<Dictionary<string, object?>>();
-            await foreach (var msg in transport.ReadMessagesAsync())
+            await foreach (var msg in transport.ReadMessagesAsync(TestContext.Current.CancellationToken))
             {
                 messages.Add(msg);
             }
@@ -390,7 +390,7 @@ public class SubprocessBufferingTests
         {
             var exception = await Assert.ThrowsAsync<CLIJSONDecodeException>(async () =>
             {
-                await foreach (var _ in transport.ReadMessagesAsync())
+                await foreach (var _ in transport.ReadMessagesAsync(TestContext.Current.CancellationToken))
                 {
                     // Should throw before returning any messages
                 }
@@ -419,7 +419,7 @@ public class SubprocessBufferingTests
         {
             var exception = await Assert.ThrowsAsync<CLIJSONDecodeException>(async () =>
             {
-                await foreach (var _ in transport.ReadMessagesAsync())
+                await foreach (var _ in transport.ReadMessagesAsync(TestContext.Current.CancellationToken))
                 {
                     // Should throw before returning any messages
                 }
@@ -480,7 +480,7 @@ public class SubprocessBufferingTests
         try
         {
             var messages = new List<Dictionary<string, object?>>();
-            await foreach (var msg in transport.ReadMessagesAsync())
+            await foreach (var msg in transport.ReadMessagesAsync(TestContext.Current.CancellationToken))
             {
                 messages.Add(msg);
             }

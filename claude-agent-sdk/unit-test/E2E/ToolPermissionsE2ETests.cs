@@ -35,14 +35,15 @@ public class ToolPermissionsE2ETests : E2ETestBase
             CanUseTool = PermissionCallback
         };
 
+        var ct = TestContext.Current.CancellationToken;
         await using var client = new ClaudeSDKClient(options);
 
         // CanUseTool requires streaming mode, so pass null for initial prompt
         // then use QueryAsync
-        await client.ConnectAsync();
-        await client.QueryAsync("Write 'hello world' to /tmp/test.txt");
+        await client.ConnectAsync(ct: ct);
+        await client.QueryAsync("Write 'hello world' to /tmp/test.txt", ct: ct);
 
-        await foreach (var message in client.ReceiveResponseAsync())
+        await foreach (var message in client.ReceiveResponseAsync(ct))
         {
             // Just consume messages
         }
@@ -87,11 +88,12 @@ public class ToolPermissionsE2ETests : E2ETestBase
             CanUseTool = PermissionCallback
         };
 
+        var ct = TestContext.Current.CancellationToken;
         await using var client = new ClaudeSDKClient(options);
-        await client.ConnectAsync();
-        await client.QueryAsync("Write 'hello world' to /tmp/test.txt");
+        await client.ConnectAsync(ct: ct);
+        await client.QueryAsync("Write 'hello world' to /tmp/test.txt", ct: ct);
 
-        await foreach (var message in client.ReceiveResponseAsync())
+        await foreach (var message in client.ReceiveResponseAsync(ct))
         {
             // Just consume messages
         }
@@ -125,11 +127,12 @@ public class ToolPermissionsE2ETests : E2ETestBase
             CanUseTool = PermissionCallback
         };
 
+        var ct = TestContext.Current.CancellationToken;
         await using var client = new ClaudeSDKClient(options);
-        await client.ConnectAsync();
-        await client.QueryAsync("Read the file /tmp/test.txt");
+        await client.ConnectAsync(ct: ct);
+        await client.QueryAsync("Read the file /tmp/test.txt", ct: ct);
 
-        await foreach (var message in client.ReceiveResponseAsync())
+        await foreach (var message in client.ReceiveResponseAsync(ct))
         {
             // Just consume messages
         }

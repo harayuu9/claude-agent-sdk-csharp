@@ -31,12 +31,13 @@ public class PartialMessagesE2ETests : E2ETestBase
         };
 
         var collectedMessages = new List<Message>();
+        var ct = TestContext.Current.CancellationToken;
 
         await using var client = new ClaudeSDKClient(options);
-        await client.ConnectAsync();
-        await client.QueryAsync("Think of three jokes, then tell one");
+        await client.ConnectAsync(ct: ct);
+        await client.QueryAsync("Think of three jokes, then tell one", ct: ct);
 
-        await foreach (var message in client.ReceiveResponseAsync())
+        await foreach (var message in client.ReceiveResponseAsync(ct))
         {
             collectedMessages.Add(message);
         }
@@ -103,12 +104,13 @@ public class PartialMessagesE2ETests : E2ETestBase
         };
 
         var thinkingDeltas = new List<string>();
+        var ct = TestContext.Current.CancellationToken;
 
         await using var client = new ClaudeSDKClient(options);
-        await client.ConnectAsync();
-        await client.QueryAsync("Think step by step about what 2 + 2 equals");
+        await client.ConnectAsync(ct: ct);
+        await client.QueryAsync("Think step by step about what 2 + 2 equals", ct: ct);
 
-        await foreach (var message in client.ReceiveResponseAsync())
+        await foreach (var message in client.ReceiveResponseAsync(ct))
         {
             if (message is StreamEvent streamEvent)
             {
@@ -157,12 +159,13 @@ public class PartialMessagesE2ETests : E2ETestBase
         };
 
         var collectedMessages = new List<Message>();
+        var ct = TestContext.Current.CancellationToken;
 
         await using var client = new ClaudeSDKClient(options);
-        await client.ConnectAsync();
-        await client.QueryAsync("Say hello");
+        await client.ConnectAsync(ct: ct);
+        await client.QueryAsync("Say hello", ct: ct);
 
-        await foreach (var message in client.ReceiveResponseAsync())
+        await foreach (var message in client.ReceiveResponseAsync(ct))
         {
             collectedMessages.Add(message);
         }

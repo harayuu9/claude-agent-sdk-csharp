@@ -36,7 +36,7 @@ public class StderrCallbackE2ETests : E2ETestBase
         };
 
         // Run a simple query
-        await foreach (var _ in ClaudeAgent.QueryAsync("What is 1+1?", options))
+        await foreach (var _ in ClaudeAgent.QueryAsync("What is 1+1?", options, cancellationToken: TestContext.Current.CancellationToken))
         {
             // Just consume messages
         }
@@ -69,7 +69,7 @@ public class StderrCallbackE2ETests : E2ETestBase
         };
 
         // Run a simple query
-        await foreach (var _ in ClaudeAgent.QueryAsync("What is 1+1?", options))
+        await foreach (var _ in ClaudeAgent.QueryAsync("What is 1+1?", options, cancellationToken: TestContext.Current.CancellationToken))
         {
             // Just consume messages
         }

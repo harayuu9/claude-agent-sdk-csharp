@@ -92,7 +92,7 @@ public class SdkMcpIntegrationTests
         var server = (InternalTypes.ISdkMcpServer)serverConfig.Instance;
 
         // Test list_tools - verify tools are registered
-        var tools = await server.ListToolsAsync();
+        var tools = await server.ListToolsAsync(TestContext.Current.CancellationToken);
         Assert.Equal(2, tools.Count);
 
         var toolNames = tools.Select(t => t.Name).ToList();
@@ -102,7 +102,8 @@ public class SdkMcpIntegrationTests
         // Test call_tool - call greet_user
         var greetResult = await server.CallToolAsync(
             "greet_user",
-            new Dictionary<string, object?> { ["name"] = "Alice" });
+            new Dictionary<string, object?> { ["name"] = "Alice" },
+            TestContext.Current.CancellationToken);
 
         Assert.Equal("Hello, Alice!", greetResult.Content[0].Text);
         Assert.Single(toolExecutions);
@@ -113,7 +114,8 @@ public class SdkMcpIntegrationTests
         // Test call_tool - call add_numbers
         var addResult = await server.CallToolAsync(
             "add_numbers",
-            new Dictionary<string, object?> { ["a"] = 5.0, ["b"] = 3.0 });
+            new Dictionary<string, object?> { ["a"] = 5.0, ["b"] = 3.0 },
+            TestContext.Current.CancellationToken);
 
         Assert.Contains("8", addResult.Content[0].Text);
         Assert.Equal(2, toolExecutions.Count);
@@ -144,7 +146,7 @@ public class SdkMcpIntegrationTests
         Assert.NotNull(echoTool.Handler);
 
         // Test the handler works
-        var result = await echoTool.Handler(new EchoArgs { Input = "test" }, CancellationToken.None);
+        var result = await echoTool.Handler(new EchoArgs { Input = "test" }, TestContext.Current.CancellationToken);
         Assert.Equal("test", result.Content[0].Text);
     }
 
@@ -162,7 +164,7 @@ public class SdkMcpIntegrationTests
 
         // Verify the tool raises an error when called directly
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await failTool.Handler(new EmptyArgs(), CancellationToken.None));
+            await failTool.Handler(new EmptyArgs(), TestContext.Current.CancellationToken));
 
         // Test error handling through the server
         var serverConfig = SdkMcpServer.Create("error-test", "1.0.0", [failTool]);
@@ -170,7 +172,7 @@ public class SdkMcpIntegrationTests
         var server = (InternalTypes.ISdkMcpServer)serverConfig.Instance;
 
         // The server should return an error result, not raise
-        var result = await server.CallToolAsync("fail", new Dictionary<string, object?>());
+        var result = await server.CallToolAsync("fail", new Dictionary<string, object?>(), TestContext.Current.CancellationToken);
 
         // MCP SDK catches exceptions and returns error results
         Assert.True(result.IsError);
@@ -239,7 +241,7 @@ public class SdkMcpIntegrationTests
         Assert.Equal("2.0.0", server.ServerInfo.Version);
 
         // With no tools, ListToolsAsync should return empty list
-        var tools = await server.ListToolsAsync();
+        var tools = await server.ListToolsAsync(TestContext.Current.CancellationToken);
         Assert.Empty(tools);
     }
 
@@ -298,7 +300,8 @@ public class SdkMcpIntegrationTests
         // Call the chart generation tool
         var result = await server.CallToolAsync(
             "generate_chart",
-            new Dictionary<string, object?> { ["title"] = "Sales Report" });
+            new Dictionary<string, object?> { ["title"] = "Sales Report" },
+            TestContext.Current.CancellationToken);
 
         // Note: Internal SdkMcpContent only has Text property, so we can only verify:
         // 1. The tool was executed
@@ -318,7 +321,7 @@ public class SdkMcpIntegrationTests
         Assert.Equal("Sales Report", chartArgs.Title);
 
         // Also verify the handler directly returns correct image content
-        var directResult = await generateChartTool.Handler(new ChartArgs { Title = "Direct Test" }, CancellationToken.None);
+        var directResult = await generateChartTool.Handler(new ChartArgs { Title = "Direct Test" }, TestContext.Current.CancellationToken);
         Assert.Equal(2, directResult.Content.Count);
         Assert.Equal("text", directResult.Content[0].Type);
         Assert.Equal("Generated chart: Direct Test", directResult.Content[0].Text);

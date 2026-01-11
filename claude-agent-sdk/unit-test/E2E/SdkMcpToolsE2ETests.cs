@@ -61,10 +61,11 @@ public class SdkMcpToolsE2ETests : E2ETestBase
             AllowedTools = ["mcp__test__echo"]
         };
 
+        var ct = TestContext.Current.CancellationToken;
         await using var client = new ClaudeSDKClient(options);
-        await client.ConnectAsync("Call the mcp__test__echo tool with any text");
+        await client.ConnectAsync("Call the mcp__test__echo tool with any text", ct);
 
-        await foreach (var message in client.ReceiveResponseAsync())
+        await foreach (var message in client.ReceiveResponseAsync(ct))
         {
             // Just consume messages
         }
@@ -117,11 +118,12 @@ public class SdkMcpToolsE2ETests : E2ETestBase
             AllowedTools = ["mcp__test__greet"]     // But allow greet
         };
 
+        var ct = TestContext.Current.CancellationToken;
         await using var client = new ClaudeSDKClient(options);
         await client.ConnectAsync(
-            "Use the echo tool to echo 'test' and use greet tool to greet 'Alice'");
+            "Use the echo tool to echo 'test' and use greet tool to greet 'Alice'", ct);
 
-        await foreach (var message in client.ReceiveResponseAsync())
+        await foreach (var message in client.ReceiveResponseAsync(ct))
         {
             // Just consume messages
         }
@@ -174,11 +176,12 @@ public class SdkMcpToolsE2ETests : E2ETestBase
             AllowedTools = ["mcp__multi__echo", "mcp__multi__greet"]
         };
 
+        var ct = TestContext.Current.CancellationToken;
         await using var client = new ClaudeSDKClient(options);
         await client.ConnectAsync(
-            "Call mcp__multi__echo with text='test' and mcp__multi__greet with name='Bob'");
+            "Call mcp__multi__echo with text='test' and mcp__multi__greet with name='Bob'", ct);
 
-        await foreach (var message in client.ReceiveResponseAsync())
+        await foreach (var message in client.ReceiveResponseAsync(ct))
         {
             // Just consume messages
         }
@@ -222,10 +225,11 @@ public class SdkMcpToolsE2ETests : E2ETestBase
             }
         };
 
+        var ct = TestContext.Current.CancellationToken;
         await using var client = new ClaudeSDKClient(options);
-        await client.ConnectAsync("Call the mcp__noperm__echo tool");
+        await client.ConnectAsync("Call the mcp__noperm__echo tool", ct);
 
-        await foreach (var message in client.ReceiveResponseAsync())
+        await foreach (var message in client.ReceiveResponseAsync(ct))
         {
             // Just consume messages
         }

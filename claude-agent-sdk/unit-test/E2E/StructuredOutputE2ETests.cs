@@ -41,13 +41,16 @@ public class StructuredOutputE2ETests : E2ETestBase
                 ["schema"] = schema
             },
             PermissionMode = PermissionMode.AcceptEdits,
+            Model = "claude-haiku-4-5-20251001",
             Cwd = "."  // Use current directory
         };
 
+        var ct = TestContext.Current.CancellationToken;
         ResultMessage? resultMessage = null;
         await foreach (var message in ClaudeAgent.QueryAsync(
             "Count how many C# files are in the claude-agent-sdk/ directory and check if there are any test files. Use tools to explore the filesystem.",
-            options))
+            options,
+            cancellationToken: ct))
         {
             if (message is ResultMessage result)
             {
@@ -116,10 +119,12 @@ public class StructuredOutputE2ETests : E2ETestBase
             PermissionMode = PermissionMode.AcceptEdits
         };
 
+        var ct = TestContext.Current.CancellationToken;
         ResultMessage? resultMessage = null;
         await foreach (var message in ClaudeAgent.QueryAsync(
             "Analyze this text: 'Hello world'. Provide word count, character count, and list of words.",
-            options))
+            options,
+            cancellationToken: ct))
         {
             if (message is ResultMessage result)
             {
@@ -178,10 +183,12 @@ public class StructuredOutputE2ETests : E2ETestBase
             Cwd = "."
         };
 
+        var ct = TestContext.Current.CancellationToken;
         ResultMessage? resultMessage = null;
         await foreach (var message in ClaudeAgent.QueryAsync(
             "Search for test files in the unit-test/ directory. Determine which test framework is being used (xunit/nunit/mstest) and count how many test files exist. Use Grep to search for framework imports.",
-            options))
+            options,
+            cancellationToken: ct))
         {
             if (message is ResultMessage result)
             {
@@ -238,10 +245,12 @@ public class StructuredOutputE2ETests : E2ETestBase
             Cwd = Path.GetTempPath()  // Cross-platform temp directory
         };
 
+        var ct = TestContext.Current.CancellationToken;
         ResultMessage? resultMessage = null;
         await foreach (var message in ClaudeAgent.QueryAsync(
             "Count how many files are in the current directory and check if there's a README file. Use tools as needed.",
-            options))
+            options,
+            cancellationToken: ct))
         {
             if (message is ResultMessage result)
             {

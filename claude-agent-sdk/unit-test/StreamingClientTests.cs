@@ -20,7 +20,7 @@ public class ClaudeSDKClientStreamingTests
 
         await using (var client = new ClaudeSDKClient(transport: transport))
         {
-            await client.ConnectAsync();
+            await client.ConnectAsync(ct: TestContext.Current.CancellationToken);
 
             // Verify connect was called
             Assert.Equal(1, transport.ConnectCallCount);
@@ -41,7 +41,7 @@ public class ClaudeSDKClientStreamingTests
         var transport = new StreamingMockTransport();
         var client = new ClaudeSDKClient(transport: transport);
 
-        await client.ConnectAsync();
+        await client.ConnectAsync(ct: TestContext.Current.CancellationToken);
 
         // Verify connect was called
         Assert.Equal(1, transport.ConnectCallCount);
@@ -64,7 +64,7 @@ public class ClaudeSDKClientStreamingTests
         var transport = new StreamingMockTransport();
         var client = new ClaudeSDKClient(transport: transport);
 
-        await client.ConnectAsync("Hello Claude");
+        await client.ConnectAsync("Hello Claude", TestContext.Current.CancellationToken);
 
         // Verify connected
         Assert.True(client.IsConnected);
@@ -104,7 +104,7 @@ public class ClaudeSDKClientStreamingTests
             };
         }
 
-        await client.ConnectAsync(MessageStream());
+        await client.ConnectAsync(MessageStream(), TestContext.Current.CancellationToken);
 
         // Verify connected
         Assert.True(client.IsConnected);
@@ -120,9 +120,9 @@ public class ClaudeSDKClientStreamingTests
         var transport = new StreamingMockTransport();
 
         await using var client = new ClaudeSDKClient(transport: transport);
-        await client.ConnectAsync();
+        await client.ConnectAsync(ct: TestContext.Current.CancellationToken);
 
-        await client.QueryAsync("Test message");
+        await client.QueryAsync("Test message", ct: TestContext.Current.CancellationToken);
 
         // Verify write was called with correct format
         // Should have at least 2 writes: init request and user message
@@ -142,9 +142,9 @@ public class ClaudeSDKClientStreamingTests
         var transport = new StreamingMockTransport();
 
         await using var client = new ClaudeSDKClient(transport: transport);
-        await client.ConnectAsync();
+        await client.ConnectAsync(ct: TestContext.Current.CancellationToken);
 
-        await client.QueryAsync("Test", sessionId: "custom-session");
+        await client.QueryAsync("Test", sessionId: "custom-session", ct: TestContext.Current.CancellationToken);
 
         // Find user message with session_id
         var sessionId = transport.GetSessionIdFromUserMessage();
@@ -162,7 +162,7 @@ public class ClaudeSDKClientStreamingTests
 
         await Assert.ThrowsAsync<CLIConnectionException>(async () =>
         {
-            await client.QueryAsync("Test");
+            await client.QueryAsync("Test", ct: TestContext.Current.CancellationToken);
         });
     }
 
@@ -180,10 +180,11 @@ public class ClaudeSDKClientStreamingTests
         transport.EnqueueUserMessage("Hi there");
 
         await using var client = new ClaudeSDKClient(transport: transport);
-        await client.ConnectAsync();
+        await client.ConnectAsync(ct: TestContext.Current.CancellationToken);
 
         var messages = new List<Message>();
-        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        cts.CancelAfter(TimeSpan.FromSeconds(5));
 
         await foreach (var msg in client.ReceiveMessagesAsync(cts.Token))
         {
@@ -220,10 +221,10 @@ public class ClaudeSDKClientStreamingTests
         transport.EnqueueAssistantMessage("Should not see this");
 
         await using var client = new ClaudeSDKClient(transport: transport);
-        await client.ConnectAsync();
+        await client.ConnectAsync(ct: TestContext.Current.CancellationToken);
 
         var messages = new List<Message>();
-        await foreach (var msg in client.ReceiveResponseAsync())
+        await foreach (var msg in client.ReceiveResponseAsync(TestContext.Current.CancellationToken))
         {
             messages.Add(msg);
         }
@@ -244,9 +245,9 @@ public class ClaudeSDKClientStreamingTests
         var transport = new StreamingMockTransport();
 
         await using var client = new ClaudeSDKClient(transport: transport);
-        await client.ConnectAsync();
+        await client.ConnectAsync(ct: TestContext.Current.CancellationToken);
 
-        await client.InterruptAsync();
+        await client.InterruptAsync(TestContext.Current.CancellationToken);
 
         // Check that an interrupt control request was sent
         Assert.True(transport.HasControlRequest("interrupt"));
@@ -263,7 +264,7 @@ public class ClaudeSDKClientStreamingTests
 
         await Assert.ThrowsAsync<CLIConnectionException>(async () =>
         {
-            await client.InterruptAsync();
+            await client.InterruptAsync(TestContext.Current.CancellationToken);
         });
     }
 
@@ -284,7 +285,7 @@ public class ClaudeSDKClientStreamingTests
         var transport = new StreamingMockTransport();
         var client = new ClaudeSDKClient(options: options, transport: transport);
 
-        await client.ConnectAsync();
+        await client.ConnectAsync(ct: TestContext.Current.CancellationToken);
 
         // Verify connected
         Assert.True(client.IsConnected);
@@ -299,31 +300,32 @@ public class ClaudeSDKClientStreamingTests
     public async Task ConcurrentSendReceive()
     {
         var transport = new StreamingMockTransport();
+        var ct = TestContext.Current.CancellationToken;
 
         // Queue messages to be received (delayed)
         _ = Task.Run(async () =>
         {
-            await Task.Delay(100);
+            await Task.Delay(100, ct);
             transport.EnqueueAssistantMessage("Response 1");
-            await Task.Delay(100);
+            await Task.Delay(100, ct);
             transport.EnqueueResultMessage();
-        });
+        }, ct);
 
         await using var client = new ClaudeSDKClient(transport: transport);
-        await client.ConnectAsync();
+        await client.ConnectAsync(ct: ct);
 
         // Start receiving in background
         var receiveTask = Task.Run(async () =>
         {
-            await foreach (var msg in client.ReceiveResponseAsync())
+            await foreach (var msg in client.ReceiveResponseAsync(ct))
             {
                 return msg;
             }
             return null;
-        });
+        }, ct);
 
         // Send message while receiving
-        await client.QueryAsync("Question 1");
+        await client.QueryAsync("Question 1", ct: ct);
 
         // Wait for first message
         var firstMsg = await receiveTask;
@@ -349,7 +351,7 @@ public class ClaudeSDKClientEdgeCasesTests
 
         await Assert.ThrowsAsync<CLIConnectionException>(async () =>
         {
-            await foreach (var _ in client.ReceiveMessagesAsync())
+            await foreach (var _ in client.ReceiveMessagesAsync(TestContext.Current.CancellationToken))
             {
                 // Should not reach here
             }
@@ -367,7 +369,7 @@ public class ClaudeSDKClientEdgeCasesTests
 
         await Assert.ThrowsAsync<CLIConnectionException>(async () =>
         {
-            await foreach (var _ in client.ReceiveResponseAsync())
+            await foreach (var _ in client.ReceiveResponseAsync(TestContext.Current.CancellationToken))
             {
                 // Should not reach here
             }
@@ -384,12 +386,12 @@ public class ClaudeSDKClientEdgeCasesTests
         var transport = new StreamingMockTransport();
         var client = new ClaudeSDKClient(transport: transport);
 
-        await client.ConnectAsync();
+        await client.ConnectAsync(ct: TestContext.Current.CancellationToken);
 
         // Second connect should throw
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
         {
-            await client.ConnectAsync();
+            await client.ConnectAsync(ct: TestContext.Current.CancellationToken);
         });
     }
 
@@ -419,7 +421,7 @@ public class ClaudeSDKClientEdgeCasesTests
         {
             await using (var client = new ClaudeSDKClient(transport: transport))
             {
-                await client.ConnectAsync();
+                await client.ConnectAsync(ct: TestContext.Current.CancellationToken);
                 throw new InvalidOperationException("Test error");
             }
         });
@@ -443,11 +445,11 @@ public class ClaudeSDKClientEdgeCasesTests
         transport.EnqueueResultMessage();
 
         await using var client = new ClaudeSDKClient(transport: transport);
-        await client.ConnectAsync();
+        await client.ConnectAsync(ct: TestContext.Current.CancellationToken);
 
         // Test list comprehension pattern from docstring
         var messages = new List<Message>();
-        await foreach (var msg in client.ReceiveResponseAsync())
+        await foreach (var msg in client.ReceiveResponseAsync(TestContext.Current.CancellationToken))
         {
             messages.Add(msg);
         }
@@ -466,9 +468,9 @@ public class ClaudeSDKClientEdgeCasesTests
         var transport = new StreamingMockTransport();
 
         await using var client = new ClaudeSDKClient(transport: transport);
-        await client.ConnectAsync();
+        await client.ConnectAsync(ct: TestContext.Current.CancellationToken);
 
-        await client.SetPermissionModeAsync(PermissionMode.AcceptEdits);
+        await client.SetPermissionModeAsync(PermissionMode.AcceptEdits, TestContext.Current.CancellationToken);
 
         Assert.True(transport.HasControlRequest("set_permission_mode"));
     }
@@ -482,9 +484,9 @@ public class ClaudeSDKClientEdgeCasesTests
         var transport = new StreamingMockTransport();
 
         await using var client = new ClaudeSDKClient(transport: transport);
-        await client.ConnectAsync();
+        await client.ConnectAsync(ct: TestContext.Current.CancellationToken);
 
-        await client.SetModelAsync("claude-sonnet-4-20250514");
+        await client.SetModelAsync("claude-sonnet-4-20250514", TestContext.Current.CancellationToken);
 
         Assert.True(transport.HasControlRequest("set_model"));
     }
@@ -498,9 +500,9 @@ public class ClaudeSDKClientEdgeCasesTests
         var transport = new StreamingMockTransport();
 
         await using var client = new ClaudeSDKClient(transport: transport);
-        await client.ConnectAsync();
+        await client.ConnectAsync(ct: TestContext.Current.CancellationToken);
 
-        await client.RewindFilesAsync("user-message-id-123");
+        await client.RewindFilesAsync("user-message-id-123", TestContext.Current.CancellationToken);
 
         Assert.True(transport.HasControlRequest("rewind_files"));
     }
@@ -514,7 +516,7 @@ public class ClaudeSDKClientEdgeCasesTests
         var transport = new StreamingMockTransport();
 
         await using var client = new ClaudeSDKClient(transport: transport);
-        await client.ConnectAsync();
+        await client.ConnectAsync(ct: TestContext.Current.CancellationToken);
 
         var serverInfo = client.GetServerInfo();
         Assert.NotNull(serverInfo);

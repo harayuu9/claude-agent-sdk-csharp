@@ -76,10 +76,11 @@ public class HooksE2ETests : E2ETestBase
             }
         };
 
+        var ct = TestContext.Current.CancellationToken;
         await using var client = new ClaudeSDKClient(options);
-        await client.ConnectAsync("Run this bash command: echo 'hello'");
+        await client.ConnectAsync("Run this bash command: echo 'hello'", ct);
 
-        await foreach (var message in client.ReceiveResponseAsync())
+        await foreach (var message in client.ReceiveResponseAsync(ct))
         {
             // Just consume messages
         }
@@ -139,10 +140,11 @@ public class HooksE2ETests : E2ETestBase
             }
         };
 
+        var ct = TestContext.Current.CancellationToken;
         await using var client = new ClaudeSDKClient(options);
-        await client.ConnectAsync("Run: echo 'test message'");
+        await client.ConnectAsync("Run: echo 'test message'", ct);
 
-        await foreach (var message in client.ReceiveResponseAsync())
+        await foreach (var message in client.ReceiveResponseAsync(ct))
         {
             // Just consume messages
         }
@@ -198,10 +200,11 @@ public class HooksE2ETests : E2ETestBase
             }
         };
 
+        var ct = TestContext.Current.CancellationToken;
         await using var client = new ClaudeSDKClient(options);
-        await client.ConnectAsync("Run: echo 'testing hooks'");
+        await client.ConnectAsync("Run: echo 'testing hooks'", ct);
 
-        await foreach (var message in client.ReceiveResponseAsync())
+        await foreach (var message in client.ReceiveResponseAsync(ct))
         {
             // Just consume messages
         }

@@ -41,7 +41,7 @@ public class IntegrationTests
 
         // Act
         var messages = new List<Message>();
-        await foreach (var msg in Query.RunAsync(prompt: "What is 2 + 2?", transport: transport))
+        await foreach (var msg in Query.RunAsync(prompt: "What is 2 + 2?", transport: transport, cancellationToken: TestContext.Current.CancellationToken))
         {
             messages.Add(msg);
         }
@@ -104,7 +104,7 @@ public class IntegrationTests
 
         // Act
         var messages = new List<Message>();
-        await foreach (var msg in Query.RunAsync(prompt: "Read /test.txt", options: options, transport: transport))
+        await foreach (var msg in Query.RunAsync(prompt: "Read /test.txt", options: options, transport: transport, cancellationToken: TestContext.Current.CancellationToken))
         {
             messages.Add(msg);
         }
@@ -136,7 +136,7 @@ public class IntegrationTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<CLINotFoundException>(async () =>
         {
-            await foreach (var _ in Query.RunAsync(prompt: "test", options: options))
+            await foreach (var _ in Query.RunAsync(prompt: "test", options: options, cancellationToken: TestContext.Current.CancellationToken))
             {
                 // Should not reach here
             }
@@ -182,7 +182,7 @@ public class IntegrationTests
 
         // Act
         var messages = new List<Message>();
-        await foreach (var msg in Query.RunAsync(prompt: "Continue", options: options, transport: transport))
+        await foreach (var msg in Query.RunAsync(prompt: "Continue", options: options, transport: transport, cancellationToken: TestContext.Current.CancellationToken))
         {
             messages.Add(msg);
         }
@@ -237,7 +237,7 @@ public class IntegrationTests
 
         // Act
         var messages = new List<Message>();
-        await foreach (var msg in Query.RunAsync(prompt: "Read the readme", options: options, transport: transport))
+        await foreach (var msg in Query.RunAsync(prompt: "Read the readme", options: options, transport: transport, cancellationToken: TestContext.Current.CancellationToken))
         {
             messages.Add(msg);
         }

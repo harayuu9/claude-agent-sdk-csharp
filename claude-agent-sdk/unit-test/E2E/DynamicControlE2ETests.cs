@@ -23,27 +23,28 @@ public class DynamicControlE2ETests : E2ETestBase
             PermissionMode = PermissionMode.Default
         };
 
+        var ct = TestContext.Current.CancellationToken;
         await using var client = new ClaudeSDKClient(options);
-        await client.ConnectAsync();
+        await client.ConnectAsync(ct: ct);
 
         // Change permission mode to acceptEdits
-        await client.SetPermissionModeAsync(PermissionMode.AcceptEdits);
+        await client.SetPermissionModeAsync(PermissionMode.AcceptEdits, ct);
 
         // Make a query that would normally require permission
-        await client.QueryAsync("What is 2+2? Just respond with the number.");
+        await client.QueryAsync("What is 2+2? Just respond with the number.", ct: ct);
 
-        await foreach (var message in client.ReceiveResponseAsync())
+        await foreach (var message in client.ReceiveResponseAsync(ct))
         {
             // Just consume messages
         }
 
         // Change back to default
-        await client.SetPermissionModeAsync(PermissionMode.Default);
+        await client.SetPermissionModeAsync(PermissionMode.Default, ct);
 
         // Make another query
-        await client.QueryAsync("What is 3+3? Just respond with the number.");
+        await client.QueryAsync("What is 3+3? Just respond with the number.", ct: ct);
 
-        await foreach (var message in client.ReceiveResponseAsync())
+        await foreach (var message in client.ReceiveResponseAsync(ct))
         {
             // Just consume messages
         }
@@ -59,34 +60,35 @@ public class DynamicControlE2ETests : E2ETestBase
         SkipIfCannotRunE2E();
 
         var options = new ClaudeAgentOptions();
+        var ct = TestContext.Current.CancellationToken;
 
         await using var client = new ClaudeSDKClient(options);
-        await client.ConnectAsync();
+        await client.ConnectAsync(ct: ct);
 
         // Start with default model
-        await client.QueryAsync("What is 1+1? Just the number.");
+        await client.QueryAsync("What is 1+1? Just the number.", ct: ct);
 
-        await foreach (var message in client.ReceiveResponseAsync())
+        await foreach (var message in client.ReceiveResponseAsync(ct))
         {
             // Consume default model response
         }
 
         // Switch to Haiku model
-        await client.SetModelAsync("claude-3-5-haiku-20241022");
+        await client.SetModelAsync("claude-3-5-haiku-20241022", ct);
 
-        await client.QueryAsync("What is 2+2? Just the number.");
+        await client.QueryAsync("What is 2+2? Just the number.", ct: ct);
 
-        await foreach (var message in client.ReceiveResponseAsync())
+        await foreach (var message in client.ReceiveResponseAsync(ct))
         {
             // Consume Haiku model response
         }
 
         // Switch back to default (null means default)
-        await client.SetModelAsync(null);
+        await client.SetModelAsync(null, ct);
 
-        await client.QueryAsync("What is 3+3? Just the number.");
+        await client.QueryAsync("What is 3+3? Just the number.", ct: ct);
 
-        await foreach (var message in client.ReceiveResponseAsync())
+        await foreach (var message in client.ReceiveResponseAsync(ct))
         {
             // Consume response
         }
@@ -102,17 +104,18 @@ public class DynamicControlE2ETests : E2ETestBase
         SkipIfCannotRunE2E();
 
         var options = new ClaudeAgentOptions();
+        var ct = TestContext.Current.CancellationToken;
 
         await using var client = new ClaudeSDKClient(options);
-        await client.ConnectAsync();
+        await client.ConnectAsync(ct: ct);
 
         // Start a query
-        await client.QueryAsync("Count from 1 to 100 slowly.");
+        await client.QueryAsync("Count from 1 to 100 slowly.", ct: ct);
 
         // Send interrupt (may or may not stop the response depending on timing)
         try
         {
-            await client.InterruptAsync();
+            await client.InterruptAsync(ct);
         }
         catch (Exception)
         {
@@ -120,7 +123,7 @@ public class DynamicControlE2ETests : E2ETestBase
         }
 
         // Consume any remaining messages
-        await foreach (var message in client.ReceiveResponseAsync())
+        await foreach (var message in client.ReceiveResponseAsync(ct))
         {
             // Just consume messages after interrupt
         }
