@@ -11,12 +11,27 @@ namespace ClaudeAgentSdk;
 [JsonConverter(typeof(JsonStringEnumConverter<PermissionMode>))]
 public enum PermissionMode
 {
+    /// <summary>
+    /// Default permission mode requiring explicit approval for sensitive operations.
+    /// </summary>
     [JsonStringEnumMemberName("default")]
     Default,
+
+    /// <summary>
+    /// Automatically accept file edits without requiring approval.
+    /// </summary>
     [JsonStringEnumMemberName("acceptEdits")]
     AcceptEdits,
+
+    /// <summary>
+    /// Plan mode for reviewing changes before execution.
+    /// </summary>
     [JsonStringEnumMemberName("plan")]
     Plan,
+
+    /// <summary>
+    /// Bypass all permission checks (use with caution).
+    /// </summary>
     [JsonStringEnumMemberName("bypassPermissions")]
     BypassPermissions
 }
@@ -27,6 +42,9 @@ public enum PermissionMode
 [JsonConverter(typeof(JsonStringEnumConverter<SdkBeta>))]
 public enum SdkBeta
 {
+    /// <summary>
+    /// 1M context window beta feature (2025-08-07).
+    /// </summary>
     [JsonStringEnumMemberName("context-1m-2025-08-07")]
     Context1M_2025_08_07
 }
@@ -37,10 +55,21 @@ public enum SdkBeta
 [JsonConverter(typeof(JsonStringEnumConverter<SettingSource>))]
 public enum SettingSource
 {
+    /// <summary>
+    /// User-level settings.
+    /// </summary>
     [JsonStringEnumMemberName("user")]
     User,
+
+    /// <summary>
+    /// Project-level settings.
+    /// </summary>
     [JsonStringEnumMemberName("project")]
     Project,
+
+    /// <summary>
+    /// Local settings specific to the current environment.
+    /// </summary>
     [JsonStringEnumMemberName("local")]
     Local
 }
@@ -51,12 +80,27 @@ public enum SettingSource
 [JsonConverter(typeof(JsonStringEnumConverter<PermissionUpdateDestination>))]
 public enum PermissionUpdateDestination
 {
+    /// <summary>
+    /// Apply permission updates to user settings.
+    /// </summary>
     [JsonStringEnumMemberName("userSettings")]
     UserSettings,
+
+    /// <summary>
+    /// Apply permission updates to project settings.
+    /// </summary>
     [JsonStringEnumMemberName("projectSettings")]
     ProjectSettings,
+
+    /// <summary>
+    /// Apply permission updates to local settings.
+    /// </summary>
     [JsonStringEnumMemberName("localSettings")]
     LocalSettings,
+
+    /// <summary>
+    /// Apply permission updates to the current session only.
+    /// </summary>
     [JsonStringEnumMemberName("session")]
     Session
 }
@@ -67,10 +111,21 @@ public enum PermissionUpdateDestination
 [JsonConverter(typeof(JsonStringEnumConverter<PermissionBehavior>))]
 public enum PermissionBehavior
 {
+    /// <summary>
+    /// Allow the operation.
+    /// </summary>
     [JsonStringEnumMemberName("allow")]
     Allow,
+
+    /// <summary>
+    /// Deny the operation.
+    /// </summary>
     [JsonStringEnumMemberName("deny")]
     Deny,
+
+    /// <summary>
+    /// Ask the user for permission.
+    /// </summary>
     [JsonStringEnumMemberName("ask")]
     Ask
 }
@@ -82,16 +137,39 @@ public enum PermissionBehavior
 [JsonConverter(typeof(JsonStringEnumConverter<HookEvent>))]
 public enum HookEvent
 {
+    /// <summary>
+    /// Triggered before a tool is used.
+    /// </summary>
     [JsonStringEnumMemberName("PreToolUse")]
     PreToolUse,
+
+    /// <summary>
+    /// Triggered after a tool is used.
+    /// </summary>
     [JsonStringEnumMemberName("PostToolUse")]
     PostToolUse,
+
+    /// <summary>
+    /// Triggered when a user prompt is submitted.
+    /// </summary>
     [JsonStringEnumMemberName("UserPromptSubmit")]
     UserPromptSubmit,
+
+    /// <summary>
+    /// Triggered when the agent stops.
+    /// </summary>
     [JsonStringEnumMemberName("Stop")]
     Stop,
+
+    /// <summary>
+    /// Triggered when a subagent stops.
+    /// </summary>
     [JsonStringEnumMemberName("SubagentStop")]
     SubagentStop,
+
+    /// <summary>
+    /// Triggered before context compaction.
+    /// </summary>
     [JsonStringEnumMemberName("PreCompact")]
     PreCompact
 }
@@ -102,16 +180,39 @@ public enum HookEvent
 [JsonConverter(typeof(JsonStringEnumConverter<AssistantMessageError>))]
 public enum AssistantMessageError
 {
+    /// <summary>
+    /// Authentication failed.
+    /// </summary>
     [JsonStringEnumMemberName("authentication_failed")]
     AuthenticationFailed,
+
+    /// <summary>
+    /// Billing error occurred.
+    /// </summary>
     [JsonStringEnumMemberName("billing_error")]
     BillingError,
+
+    /// <summary>
+    /// Rate limit exceeded.
+    /// </summary>
     [JsonStringEnumMemberName("rate_limit")]
     RateLimit,
+
+    /// <summary>
+    /// Invalid request error.
+    /// </summary>
     [JsonStringEnumMemberName("invalid_request")]
     InvalidRequest,
+
+    /// <summary>
+    /// Server error occurred.
+    /// </summary>
     [JsonStringEnumMemberName("server_error")]
     ServerError,
+
+    /// <summary>
+    /// Unknown error type.
+    /// </summary>
     [JsonStringEnumMemberName("unknown")]
     Unknown
 }
@@ -122,16 +223,39 @@ public enum AssistantMessageError
 [JsonConverter(typeof(JsonStringEnumConverter<PermissionUpdateType>))]
 public enum PermissionUpdateType
 {
+    /// <summary>
+    /// Add new permission rules.
+    /// </summary>
     [JsonStringEnumMemberName("addRules")]
     AddRules,
+
+    /// <summary>
+    /// Replace existing permission rules.
+    /// </summary>
     [JsonStringEnumMemberName("replaceRules")]
     ReplaceRules,
+
+    /// <summary>
+    /// Remove permission rules.
+    /// </summary>
     [JsonStringEnumMemberName("removeRules")]
     RemoveRules,
+
+    /// <summary>
+    /// Set the permission mode.
+    /// </summary>
     [JsonStringEnumMemberName("setMode")]
     SetMode,
+
+    /// <summary>
+    /// Add directories to the allowed list.
+    /// </summary>
     [JsonStringEnumMemberName("addDirectories")]
     AddDirectories,
+
+    /// <summary>
+    /// Remove directories from the allowed list.
+    /// </summary>
     [JsonStringEnumMemberName("removeDirectories")]
     RemoveDirectories
 }
@@ -142,12 +266,27 @@ public enum PermissionUpdateType
 [JsonConverter(typeof(JsonStringEnumConverter<AgentModel>))]
 public enum AgentModel
 {
+    /// <summary>
+    /// Claude Sonnet model.
+    /// </summary>
     [JsonStringEnumMemberName("sonnet")]
     Sonnet,
+
+    /// <summary>
+    /// Claude Opus model.
+    /// </summary>
     [JsonStringEnumMemberName("opus")]
     Opus,
+
+    /// <summary>
+    /// Claude Haiku model.
+    /// </summary>
     [JsonStringEnumMemberName("haiku")]
     Haiku,
+
+    /// <summary>
+    /// Inherit model from parent agent.
+    /// </summary>
     [JsonStringEnumMemberName("inherit")]
     Inherit
 }
@@ -158,8 +297,15 @@ public enum AgentModel
 [JsonConverter(typeof(JsonStringEnumConverter<PreCompactTrigger>))]
 public enum PreCompactTrigger
 {
+    /// <summary>
+    /// Manually triggered compaction.
+    /// </summary>
     [JsonStringEnumMemberName("manual")]
     Manual,
+
+    /// <summary>
+    /// Automatically triggered compaction.
+    /// </summary>
     [JsonStringEnumMemberName("auto")]
     Auto
 }
@@ -170,6 +316,9 @@ public enum PreCompactTrigger
 [JsonConverter(typeof(JsonStringEnumConverter<SdkPluginType>))]
 public enum SdkPluginType
 {
+    /// <summary>
+    /// Local plugin loaded from the file system.
+    /// </summary>
     [JsonStringEnumMemberName("local")]
     Local
 }
@@ -180,12 +329,27 @@ public enum SdkPluginType
 [JsonConverter(typeof(JsonStringEnumConverter<McpServerType>))]
 public enum McpServerType
 {
+    /// <summary>
+    /// Standard I/O based MCP server.
+    /// </summary>
     [JsonStringEnumMemberName("stdio")]
     Stdio,
+
+    /// <summary>
+    /// Server-Sent Events based MCP server.
+    /// </summary>
     [JsonStringEnumMemberName("sse")]
     Sse,
+
+    /// <summary>
+    /// HTTP based MCP server.
+    /// </summary>
     [JsonStringEnumMemberName("http")]
     Http,
+
+    /// <summary>
+    /// SDK-based MCP server running in-process.
+    /// </summary>
     [JsonStringEnumMemberName("sdk")]
     Sdk
 }
@@ -199,12 +363,21 @@ public enum McpServerType
 /// </summary>
 public record SystemPromptPreset
 {
+    /// <summary>
+    /// Gets the type of the system prompt configuration.
+    /// </summary>
     [JsonPropertyName("type")]
     public string Type { get; init; } = "preset";
 
+    /// <summary>
+    /// Gets the preset name to use.
+    /// </summary>
     [JsonPropertyName("preset")]
     public string Preset { get; init; } = "claude_code";
 
+    /// <summary>
+    /// Gets the optional text to append to the preset.
+    /// </summary>
     [JsonPropertyName("append")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Append { get; init; }
@@ -215,9 +388,15 @@ public record SystemPromptPreset
 /// </summary>
 public record ToolsPreset
 {
+    /// <summary>
+    /// Gets the type of the tools configuration.
+    /// </summary>
     [JsonPropertyName("type")]
     public string Type { get; init; } = "preset";
 
+    /// <summary>
+    /// Gets the preset name to use for tools.
+    /// </summary>
     [JsonPropertyName("preset")]
     public string Preset { get; init; } = "claude_code";
 }
@@ -231,16 +410,28 @@ public record ToolsPreset
 /// </summary>
 public record AgentDefinition
 {
+    /// <summary>
+    /// Gets the description of the agent.
+    /// </summary>
     [JsonPropertyName("description")]
     public required string Description { get; init; }
 
+    /// <summary>
+    /// Gets the prompt used to configure the agent's behavior.
+    /// </summary>
     [JsonPropertyName("prompt")]
     public required string Prompt { get; init; }
 
+    /// <summary>
+    /// Gets the list of tools available to the agent.
+    /// </summary>
     [JsonPropertyName("tools")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<string>? Tools { get; init; }
 
+    /// <summary>
+    /// Gets the model to use for the agent.
+    /// </summary>
     [JsonPropertyName("model")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public AgentModel? Model { get; init; }
@@ -255,9 +446,15 @@ public record AgentDefinition
 /// </summary>
 public record PermissionRuleValue
 {
+    /// <summary>
+    /// Gets the name of the tool this rule applies to.
+    /// </summary>
     [JsonPropertyName("toolName")]
     public required string ToolName { get; init; }
 
+    /// <summary>
+    /// Gets the content of the permission rule.
+    /// </summary>
     [JsonPropertyName("ruleContent")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? RuleContent { get; init; }
@@ -268,25 +465,43 @@ public record PermissionRuleValue
 /// </summary>
 public record PermissionUpdate
 {
+    /// <summary>
+    /// Gets the type of permission update.
+    /// </summary>
     [JsonPropertyName("type")]
     public required PermissionUpdateType Type { get; init; }
 
+    /// <summary>
+    /// Gets the list of permission rules to update.
+    /// </summary>
     [JsonPropertyName("rules")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<PermissionRuleValue>? Rules { get; init; }
 
+    /// <summary>
+    /// Gets the permission behavior for the rules.
+    /// </summary>
     [JsonPropertyName("behavior")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public PermissionBehavior? Behavior { get; init; }
 
+    /// <summary>
+    /// Gets the permission mode to set.
+    /// </summary>
     [JsonPropertyName("mode")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public PermissionMode? Mode { get; init; }
 
+    /// <summary>
+    /// Gets the list of directories to add or remove.
+    /// </summary>
     [JsonPropertyName("directories")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<string>? Directories { get; init; }
 
+    /// <summary>
+    /// Gets the destination for the permission update.
+    /// </summary>
     [JsonPropertyName("destination")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public PermissionUpdateDestination? Destination { get; init; }
@@ -367,6 +582,9 @@ public record ToolPermissionContext
 [JsonDerivedType(typeof(PermissionResultDeny), "deny")]
 public abstract record PermissionResult
 {
+    /// <summary>
+    /// Gets the behavior of the permission result.
+    /// </summary>
     [JsonPropertyName("behavior")]
     public abstract string Behavior { get; }
 }
@@ -376,13 +594,22 @@ public abstract record PermissionResult
 /// </summary>
 public record PermissionResultAllow : PermissionResult
 {
+    /// <summary>
+    /// Gets the behavior of the permission result.
+    /// </summary>
     [JsonPropertyName("behavior")]
     public override string Behavior => "allow";
 
+    /// <summary>
+    /// Gets the updated input parameters after permission processing.
+    /// </summary>
     [JsonPropertyName("updatedInput")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Dictionary<string, object?>? UpdatedInput { get; init; }
 
+    /// <summary>
+    /// Gets the updated permission rules to apply.
+    /// </summary>
     [JsonPropertyName("updatedPermissions")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<PermissionUpdate>? UpdatedPermissions { get; init; }
@@ -393,12 +620,21 @@ public record PermissionResultAllow : PermissionResult
 /// </summary>
 public record PermissionResultDeny : PermissionResult
 {
+    /// <summary>
+    /// Gets the behavior of the permission result.
+    /// </summary>
     [JsonPropertyName("behavior")]
     public override string Behavior => "deny";
 
+    /// <summary>
+    /// Gets the message explaining why the permission was denied.
+    /// </summary>
     [JsonPropertyName("message")]
     public string Message { get; init; } = "";
 
+    /// <summary>
+    /// Gets a value indicating whether to interrupt the agent execution.
+    /// </summary>
     [JsonPropertyName("interrupt")]
     public bool Interrupt { get; init; } = false;
 }
@@ -421,19 +657,34 @@ public delegate Task<PermissionResult> CanUseTool(
 /// </summary>
 public abstract record BaseHookInput
 {
+    /// <summary>
+    /// Gets the session identifier.
+    /// </summary>
     [JsonPropertyName("session_id")]
     public required string SessionId { get; init; }
 
+    /// <summary>
+    /// Gets the path to the transcript file.
+    /// </summary>
     [JsonPropertyName("transcript_path")]
     public required string TranscriptPath { get; init; }
 
+    /// <summary>
+    /// Gets the current working directory.
+    /// </summary>
     [JsonPropertyName("cwd")]
     public required string Cwd { get; init; }
 
+    /// <summary>
+    /// Gets the current permission mode.
+    /// </summary>
     [JsonPropertyName("permission_mode")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? PermissionMode { get; init; }
 
+    /// <summary>
+    /// Gets the name of the hook event.
+    /// </summary>
     [JsonPropertyName("hook_event_name")]
     public abstract string HookEventName { get; }
 }
@@ -443,12 +694,21 @@ public abstract record BaseHookInput
 /// </summary>
 public record PreToolUseHookInput : BaseHookInput
 {
+    /// <summary>
+    /// Gets the name of the hook event.
+    /// </summary>
     [JsonPropertyName("hook_event_name")]
     public override string HookEventName => "PreToolUse";
 
+    /// <summary>
+    /// Gets the name of the tool being used.
+    /// </summary>
     [JsonPropertyName("tool_name")]
     public required string ToolName { get; init; }
 
+    /// <summary>
+    /// Gets the input parameters for the tool.
+    /// </summary>
     [JsonPropertyName("tool_input")]
     public required Dictionary<string, object?> ToolInput { get; init; }
 }
@@ -458,15 +718,27 @@ public record PreToolUseHookInput : BaseHookInput
 /// </summary>
 public record PostToolUseHookInput : BaseHookInput
 {
+    /// <summary>
+    /// Gets the name of the hook event.
+    /// </summary>
     [JsonPropertyName("hook_event_name")]
     public override string HookEventName => "PostToolUse";
 
+    /// <summary>
+    /// Gets the name of the tool that was used.
+    /// </summary>
     [JsonPropertyName("tool_name")]
     public required string ToolName { get; init; }
 
+    /// <summary>
+    /// Gets the input parameters that were passed to the tool.
+    /// </summary>
     [JsonPropertyName("tool_input")]
     public required Dictionary<string, object?> ToolInput { get; init; }
 
+    /// <summary>
+    /// Gets the response from the tool execution.
+    /// </summary>
     [JsonPropertyName("tool_response")]
     public object? ToolResponse { get; init; }
 }
@@ -476,9 +748,15 @@ public record PostToolUseHookInput : BaseHookInput
 /// </summary>
 public record UserPromptSubmitHookInput : BaseHookInput
 {
+    /// <summary>
+    /// Gets the name of the hook event.
+    /// </summary>
     [JsonPropertyName("hook_event_name")]
     public override string HookEventName => "UserPromptSubmit";
 
+    /// <summary>
+    /// Gets the user's prompt text.
+    /// </summary>
     [JsonPropertyName("prompt")]
     public required string Prompt { get; init; }
 }
@@ -488,9 +766,15 @@ public record UserPromptSubmitHookInput : BaseHookInput
 /// </summary>
 public record StopHookInput : BaseHookInput
 {
+    /// <summary>
+    /// Gets the name of the hook event.
+    /// </summary>
     [JsonPropertyName("hook_event_name")]
     public override string HookEventName => "Stop";
 
+    /// <summary>
+    /// Gets a value indicating whether the stop hook is active.
+    /// </summary>
     [JsonPropertyName("stop_hook_active")]
     public required bool StopHookActive { get; init; }
 }
@@ -500,9 +784,15 @@ public record StopHookInput : BaseHookInput
 /// </summary>
 public record SubagentStopHookInput : BaseHookInput
 {
+    /// <summary>
+    /// Gets the name of the hook event.
+    /// </summary>
     [JsonPropertyName("hook_event_name")]
     public override string HookEventName => "SubagentStop";
 
+    /// <summary>
+    /// Gets a value indicating whether the stop hook is active.
+    /// </summary>
     [JsonPropertyName("stop_hook_active")]
     public required bool StopHookActive { get; init; }
 }
@@ -512,12 +802,21 @@ public record SubagentStopHookInput : BaseHookInput
 /// </summary>
 public record PreCompactHookInput : BaseHookInput
 {
+    /// <summary>
+    /// Gets the name of the hook event.
+    /// </summary>
     [JsonPropertyName("hook_event_name")]
     public override string HookEventName => "PreCompact";
 
+    /// <summary>
+    /// Gets the trigger that initiated the compaction.
+    /// </summary>
     [JsonPropertyName("trigger")]
     public required PreCompactTrigger Trigger { get; init; }
 
+    /// <summary>
+    /// Gets the custom instructions for the compaction.
+    /// </summary>
     [JsonPropertyName("custom_instructions")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? CustomInstructions { get; init; }
@@ -547,6 +846,9 @@ public abstract record HookInput : BaseHookInput;
 /// </summary>
 public abstract record HookSpecificOutput
 {
+    /// <summary>
+    /// Gets the name of the hook event.
+    /// </summary>
     [JsonPropertyName("hookEventName")]
     public abstract string HookEventName { get; }
 }
@@ -556,17 +858,29 @@ public abstract record HookSpecificOutput
 /// </summary>
 public record PreToolUseHookSpecificOutput : HookSpecificOutput
 {
+    /// <summary>
+    /// Gets the name of the hook event.
+    /// </summary>
     [JsonPropertyName("hookEventName")]
     public override string HookEventName => "PreToolUse";
 
+    /// <summary>
+    /// Gets the permission decision for the tool use.
+    /// </summary>
     [JsonPropertyName("permissionDecision")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public PermissionBehavior? PermissionDecision { get; init; }
 
+    /// <summary>
+    /// Gets the reason for the permission decision.
+    /// </summary>
     [JsonPropertyName("permissionDecisionReason")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? PermissionDecisionReason { get; init; }
 
+    /// <summary>
+    /// Gets the updated input parameters for the tool.
+    /// </summary>
     [JsonPropertyName("updatedInput")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Dictionary<string, object?>? UpdatedInput { get; init; }
@@ -577,9 +891,15 @@ public record PreToolUseHookSpecificOutput : HookSpecificOutput
 /// </summary>
 public record PostToolUseHookSpecificOutput : HookSpecificOutput
 {
+    /// <summary>
+    /// Gets the name of the hook event.
+    /// </summary>
     [JsonPropertyName("hookEventName")]
     public override string HookEventName => "PostToolUse";
 
+    /// <summary>
+    /// Gets additional context information to include.
+    /// </summary>
     [JsonPropertyName("additionalContext")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? AdditionalContext { get; init; }
@@ -590,9 +910,15 @@ public record PostToolUseHookSpecificOutput : HookSpecificOutput
 /// </summary>
 public record UserPromptSubmitHookSpecificOutput : HookSpecificOutput
 {
+    /// <summary>
+    /// Gets the name of the hook event.
+    /// </summary>
     [JsonPropertyName("hookEventName")]
     public override string HookEventName => "UserPromptSubmit";
 
+    /// <summary>
+    /// Gets additional context information to include.
+    /// </summary>
     [JsonPropertyName("additionalContext")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? AdditionalContext { get; init; }
@@ -603,9 +929,15 @@ public record UserPromptSubmitHookSpecificOutput : HookSpecificOutput
 /// </summary>
 public record SessionStartHookSpecificOutput : HookSpecificOutput
 {
+    /// <summary>
+    /// Gets the name of the hook event.
+    /// </summary>
     [JsonPropertyName("hookEventName")]
     public override string HookEventName => "SessionStart";
 
+    /// <summary>
+    /// Gets additional context information to include.
+    /// </summary>
     [JsonPropertyName("additionalContext")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? AdditionalContext { get; init; }
@@ -767,6 +1099,9 @@ public record HookMatcher
 [JsonDerivedType(typeof(McpSdkServerConfig), "sdk")]
 public abstract record McpServerConfig
 {
+    /// <summary>
+    /// Gets the type of the MCP server.
+    /// </summary>
     [JsonPropertyName("type")]
     public abstract McpServerType Type { get; }
 }
@@ -776,16 +1111,28 @@ public abstract record McpServerConfig
 /// </summary>
 public record McpStdioServerConfig : McpServerConfig
 {
+    /// <summary>
+    /// Gets the type of the MCP server.
+    /// </summary>
     [JsonPropertyName("type")]
     public override McpServerType Type => McpServerType.Stdio;
 
+    /// <summary>
+    /// Gets the command to execute.
+    /// </summary>
     [JsonPropertyName("command")]
     public required string Command { get; init; }
 
+    /// <summary>
+    /// Gets the arguments to pass to the command.
+    /// </summary>
     [JsonPropertyName("args")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<string>? Args { get; init; }
 
+    /// <summary>
+    /// Gets the environment variables for the process.
+    /// </summary>
     [JsonPropertyName("env")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Dictionary<string, string>? Env { get; init; }
@@ -796,12 +1143,21 @@ public record McpStdioServerConfig : McpServerConfig
 /// </summary>
 public record McpSseServerConfig : McpServerConfig
 {
+    /// <summary>
+    /// Gets the type of the MCP server.
+    /// </summary>
     [JsonPropertyName("type")]
     public override McpServerType Type => McpServerType.Sse;
 
+    /// <summary>
+    /// Gets the URL of the SSE server.
+    /// </summary>
     [JsonPropertyName("url")]
     public required string Url { get; init; }
 
+    /// <summary>
+    /// Gets the HTTP headers to send with requests.
+    /// </summary>
     [JsonPropertyName("headers")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Dictionary<string, string>? Headers { get; init; }
@@ -812,12 +1168,21 @@ public record McpSseServerConfig : McpServerConfig
 /// </summary>
 public record McpHttpServerConfig : McpServerConfig
 {
+    /// <summary>
+    /// Gets the type of the MCP server.
+    /// </summary>
     [JsonPropertyName("type")]
     public override McpServerType Type => McpServerType.Http;
 
+    /// <summary>
+    /// Gets the URL of the HTTP server.
+    /// </summary>
     [JsonPropertyName("url")]
     public required string Url { get; init; }
 
+    /// <summary>
+    /// Gets the HTTP headers to send with requests.
+    /// </summary>
     [JsonPropertyName("headers")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Dictionary<string, string>? Headers { get; init; }
@@ -828,14 +1193,20 @@ public record McpHttpServerConfig : McpServerConfig
 /// </summary>
 public record McpSdkServerConfig : McpServerConfig
 {
+    /// <summary>
+    /// Gets the type of the MCP server.
+    /// </summary>
     [JsonPropertyName("type")]
     public override McpServerType Type => McpServerType.Sdk;
 
+    /// <summary>
+    /// Gets the name of the SDK server.
+    /// </summary>
     [JsonPropertyName("name")]
     public required string Name { get; init; }
 
     /// <summary>
-    /// The MCP server instance.
+    /// Gets the MCP server instance.
     /// </summary>
     [JsonIgnore]
     public required object Instance { get; init; }
@@ -851,9 +1222,15 @@ public record McpSdkServerConfig : McpServerConfig
 /// </summary>
 public record SdkPluginConfig
 {
+    /// <summary>
+    /// Gets the type of the plugin.
+    /// </summary>
     [JsonPropertyName("type")]
     public SdkPluginType Type { get; init; } = SdkPluginType.Local;
 
+    /// <summary>
+    /// Gets the path to the plugin.
+    /// </summary>
     [JsonPropertyName("path")]
     public required string Path { get; init; }
 }
@@ -1012,6 +1389,9 @@ public abstract record ContentBlock;
 /// </summary>
 public record TextBlock : ContentBlock
 {
+    /// <summary>
+    /// Gets the text content.
+    /// </summary>
     [JsonPropertyName("text")]
     public required string Text { get; init; }
 }
@@ -1021,9 +1401,15 @@ public record TextBlock : ContentBlock
 /// </summary>
 public record ThinkingBlock : ContentBlock
 {
+    /// <summary>
+    /// Gets the thinking content.
+    /// </summary>
     [JsonPropertyName("thinking")]
     public required string Thinking { get; init; }
 
+    /// <summary>
+    /// Gets the signature of the thinking block.
+    /// </summary>
     [JsonPropertyName("signature")]
     public required string Signature { get; init; }
 }
@@ -1033,12 +1419,21 @@ public record ThinkingBlock : ContentBlock
 /// </summary>
 public record ToolUseBlock : ContentBlock
 {
+    /// <summary>
+    /// Gets the unique identifier for this tool use.
+    /// </summary>
     [JsonPropertyName("id")]
     public required string Id { get; init; }
 
+    /// <summary>
+    /// Gets the name of the tool being used.
+    /// </summary>
     [JsonPropertyName("name")]
     public required string Name { get; init; }
 
+    /// <summary>
+    /// Gets the input parameters for the tool.
+    /// </summary>
     [JsonPropertyName("input")]
     public required Dictionary<string, object?> Input { get; init; }
 }
@@ -1048,13 +1443,22 @@ public record ToolUseBlock : ContentBlock
 /// </summary>
 public record ToolResultBlock : ContentBlock
 {
+    /// <summary>
+    /// Gets the ID of the tool use this result corresponds to.
+    /// </summary>
     [JsonPropertyName("tool_use_id")]
     public required string ToolUseId { get; init; }
 
+    /// <summary>
+    /// Gets the content of the tool result.
+    /// </summary>
     [JsonPropertyName("content")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public object? Content { get; init; }
 
+    /// <summary>
+    /// Gets a value indicating whether the tool execution resulted in an error.
+    /// </summary>
     [JsonPropertyName("is_error")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? IsError { get; init; }
@@ -1081,15 +1485,21 @@ public abstract record Message;
 public record UserMessage : Message
 {
     /// <summary>
-    /// Content can be a string or a list of content blocks.
+    /// Gets the content of the message (string or list of content blocks).
     /// </summary>
     [JsonPropertyName("content")]
     public required List<ContentBlock> Content { get; init; }
 
+    /// <summary>
+    /// Gets the unique identifier for this message.
+    /// </summary>
     [JsonPropertyName("uuid")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Uuid { get; init; }
 
+    /// <summary>
+    /// Gets the parent tool use ID if this message is a response to a tool.
+    /// </summary>
     [JsonPropertyName("parent_tool_use_id")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ParentToolUseId { get; init; }
@@ -1100,16 +1510,28 @@ public record UserMessage : Message
 /// </summary>
 public record AssistantMessage : Message
 {
+    /// <summary>
+    /// Gets the content blocks of the message.
+    /// </summary>
     [JsonPropertyName("content")]
     public required List<ContentBlock> Content { get; init; }
 
+    /// <summary>
+    /// Gets the model used to generate this message.
+    /// </summary>
     [JsonPropertyName("model")]
     public required string Model { get; init; }
 
+    /// <summary>
+    /// Gets the parent tool use ID if this message is part of a tool execution.
+    /// </summary>
     [JsonPropertyName("parent_tool_use_id")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ParentToolUseId { get; init; }
 
+    /// <summary>
+    /// Gets the error type if an error occurred.
+    /// </summary>
     [JsonPropertyName("error")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public AssistantMessageError? Error { get; init; }
@@ -1120,9 +1542,15 @@ public record AssistantMessage : Message
 /// </summary>
 public record SystemMessage : Message
 {
+    /// <summary>
+    /// Gets the subtype of the system message.
+    /// </summary>
     [JsonPropertyName("subtype")]
     public required string Subtype { get; init; }
 
+    /// <summary>
+    /// Gets the data associated with the system message.
+    /// </summary>
     [JsonPropertyName("data")]
     public required Dictionary<string, object?> Data { get; init; }
 }
@@ -1132,36 +1560,66 @@ public record SystemMessage : Message
 /// </summary>
 public record ResultMessage : Message
 {
+    /// <summary>
+    /// Gets the subtype of the result message.
+    /// </summary>
     [JsonPropertyName("subtype")]
     public required string Subtype { get; init; }
 
+    /// <summary>
+    /// Gets the total duration in milliseconds.
+    /// </summary>
     [JsonPropertyName("duration_ms")]
     public required int DurationMs { get; init; }
 
+    /// <summary>
+    /// Gets the API duration in milliseconds.
+    /// </summary>
     [JsonPropertyName("duration_api_ms")]
     public required int DurationApiMs { get; init; }
 
+    /// <summary>
+    /// Gets a value indicating whether the result represents an error.
+    /// </summary>
     [JsonPropertyName("is_error")]
     public required bool IsError { get; init; }
 
+    /// <summary>
+    /// Gets the number of turns in the conversation.
+    /// </summary>
     [JsonPropertyName("num_turns")]
     public required int NumTurns { get; init; }
 
+    /// <summary>
+    /// Gets the session identifier.
+    /// </summary>
     [JsonPropertyName("session_id")]
     public required string SessionId { get; init; }
 
+    /// <summary>
+    /// Gets the total cost in USD.
+    /// </summary>
     [JsonPropertyName("total_cost_usd")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? TotalCostUsd { get; init; }
 
+    /// <summary>
+    /// Gets the token usage information.
+    /// </summary>
     [JsonPropertyName("usage")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Dictionary<string, object?>? Usage { get; init; }
 
+    /// <summary>
+    /// Gets the result text.
+    /// </summary>
     [JsonPropertyName("result")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Result { get; init; }
 
+    /// <summary>
+    /// Gets the structured output if output format was specified.
+    /// </summary>
     [JsonPropertyName("structured_output")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public object? StructuredOutput { get; init; }
@@ -1172,18 +1630,27 @@ public record ResultMessage : Message
 /// </summary>
 public record StreamEvent : Message
 {
+    /// <summary>
+    /// Gets the unique identifier for this event.
+    /// </summary>
     [JsonPropertyName("uuid")]
     public required string Uuid { get; init; }
 
+    /// <summary>
+    /// Gets the session identifier.
+    /// </summary>
     [JsonPropertyName("session_id")]
     public required string SessionId { get; init; }
 
     /// <summary>
-    /// The raw Anthropic API stream event.
+    /// Gets the raw Anthropic API stream event.
     /// </summary>
     [JsonPropertyName("event")]
     public required Dictionary<string, object?> Event { get; init; }
 
+    /// <summary>
+    /// Gets the parent tool use ID if this event is part of a tool execution.
+    /// </summary>
     [JsonPropertyName("parent_tool_use_id")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ParentToolUseId { get; init; }
@@ -1678,6 +2145,9 @@ public static class SdkMcpTool
 [JsonDerivedType(typeof(SdkControlRewindFilesRequest), "rewind_files")]
 public abstract record SdkControlRequestBase
 {
+    /// <summary>
+    /// Gets the subtype of the control request.
+    /// </summary>
     [JsonPropertyName("subtype")]
     public abstract string Subtype { get; }
 }
@@ -1687,6 +2157,9 @@ public abstract record SdkControlRequestBase
 /// </summary>
 public record SdkControlInterruptRequest : SdkControlRequestBase
 {
+    /// <summary>
+    /// Gets the subtype of the control request.
+    /// </summary>
     [JsonPropertyName("subtype")]
     public override string Subtype => "interrupt";
 }
@@ -1696,19 +2169,34 @@ public record SdkControlInterruptRequest : SdkControlRequestBase
 /// </summary>
 public record SdkControlPermissionRequest : SdkControlRequestBase
 {
+    /// <summary>
+    /// Gets the subtype of the control request.
+    /// </summary>
     [JsonPropertyName("subtype")]
     public override string Subtype => "can_use_tool";
 
+    /// <summary>
+    /// Gets the name of the tool requesting permission.
+    /// </summary>
     [JsonPropertyName("tool_name")]
     public required string ToolName { get; init; }
 
+    /// <summary>
+    /// Gets the input parameters for the tool.
+    /// </summary>
     [JsonPropertyName("input")]
     public required Dictionary<string, object?> Input { get; init; }
 
+    /// <summary>
+    /// Gets the suggested permission updates from the CLI.
+    /// </summary>
     [JsonPropertyName("permission_suggestions")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<object>? PermissionSuggestions { get; init; }
 
+    /// <summary>
+    /// Gets the path that was blocked, if applicable.
+    /// </summary>
     [JsonPropertyName("blocked_path")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? BlockedPath { get; init; }
@@ -1719,9 +2207,15 @@ public record SdkControlPermissionRequest : SdkControlRequestBase
 /// </summary>
 public record SdkControlInitializeRequest : SdkControlRequestBase
 {
+    /// <summary>
+    /// Gets the subtype of the control request.
+    /// </summary>
     [JsonPropertyName("subtype")]
     public override string Subtype => "initialize";
 
+    /// <summary>
+    /// Gets the hook configurations.
+    /// </summary>
     [JsonPropertyName("hooks")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Dictionary<HookEvent, object>? Hooks { get; init; }
@@ -1732,9 +2226,15 @@ public record SdkControlInitializeRequest : SdkControlRequestBase
 /// </summary>
 public record SdkControlSetPermissionModeRequest : SdkControlRequestBase
 {
+    /// <summary>
+    /// Gets the subtype of the control request.
+    /// </summary>
     [JsonPropertyName("subtype")]
     public override string Subtype => "set_permission_mode";
 
+    /// <summary>
+    /// Gets the permission mode to set.
+    /// </summary>
     [JsonPropertyName("mode")]
     public required string Mode { get; init; }
 }
@@ -1744,15 +2244,27 @@ public record SdkControlSetPermissionModeRequest : SdkControlRequestBase
 /// </summary>
 public record SdkHookCallbackRequest : SdkControlRequestBase
 {
+    /// <summary>
+    /// Gets the subtype of the control request.
+    /// </summary>
     [JsonPropertyName("subtype")]
     public override string Subtype => "hook_callback";
 
+    /// <summary>
+    /// Gets the callback identifier.
+    /// </summary>
     [JsonPropertyName("callback_id")]
     public required string CallbackId { get; init; }
 
+    /// <summary>
+    /// Gets the input data for the callback.
+    /// </summary>
     [JsonPropertyName("input")]
     public object? Input { get; init; }
 
+    /// <summary>
+    /// Gets the tool use ID associated with this callback.
+    /// </summary>
     [JsonPropertyName("tool_use_id")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ToolUseId { get; init; }
@@ -1763,12 +2275,21 @@ public record SdkHookCallbackRequest : SdkControlRequestBase
 /// </summary>
 public record SdkControlMcpMessageRequest : SdkControlRequestBase
 {
+    /// <summary>
+    /// Gets the subtype of the control request.
+    /// </summary>
     [JsonPropertyName("subtype")]
     public override string Subtype => "mcp_message";
 
+    /// <summary>
+    /// Gets the name of the MCP server.
+    /// </summary>
     [JsonPropertyName("server_name")]
     public required string ServerName { get; init; }
 
+    /// <summary>
+    /// Gets the message to send to the server.
+    /// </summary>
     [JsonPropertyName("message")]
     public object? Message { get; init; }
 }
@@ -1778,9 +2299,15 @@ public record SdkControlMcpMessageRequest : SdkControlRequestBase
 /// </summary>
 public record SdkControlRewindFilesRequest : SdkControlRequestBase
 {
+    /// <summary>
+    /// Gets the subtype of the control request.
+    /// </summary>
     [JsonPropertyName("subtype")]
     public override string Subtype => "rewind_files";
 
+    /// <summary>
+    /// Gets the user message ID to rewind files to.
+    /// </summary>
     [JsonPropertyName("user_message_id")]
     public required string UserMessageId { get; init; }
 }
@@ -1790,12 +2317,21 @@ public record SdkControlRewindFilesRequest : SdkControlRequestBase
 /// </summary>
 public record SdkControlRequest
 {
+    /// <summary>
+    /// Gets the type of the message.
+    /// </summary>
     [JsonPropertyName("type")]
     public string Type { get; init; } = "control_request";
 
+    /// <summary>
+    /// Gets the unique identifier for this request.
+    /// </summary>
     [JsonPropertyName("request_id")]
     public required string RequestId { get; init; }
 
+    /// <summary>
+    /// Gets the control request payload.
+    /// </summary>
     [JsonPropertyName("request")]
     public required SdkControlRequestBase Request { get; init; }
 }
@@ -1805,12 +2341,21 @@ public record SdkControlRequest
 /// </summary>
 public record ControlResponse
 {
+    /// <summary>
+    /// Gets the subtype of the response.
+    /// </summary>
     [JsonPropertyName("subtype")]
     public string Subtype { get; init; } = "success";
 
+    /// <summary>
+    /// Gets the request ID this response corresponds to.
+    /// </summary>
     [JsonPropertyName("request_id")]
     public required string RequestId { get; init; }
 
+    /// <summary>
+    /// Gets the response data.
+    /// </summary>
     [JsonPropertyName("response")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Dictionary<string, object?>? Response { get; init; }
@@ -1821,12 +2366,21 @@ public record ControlResponse
 /// </summary>
 public record ControlErrorResponse
 {
+    /// <summary>
+    /// Gets the subtype of the response.
+    /// </summary>
     [JsonPropertyName("subtype")]
     public string Subtype { get; init; } = "error";
 
+    /// <summary>
+    /// Gets the request ID this response corresponds to.
+    /// </summary>
     [JsonPropertyName("request_id")]
     public required string RequestId { get; init; }
 
+    /// <summary>
+    /// Gets the error message.
+    /// </summary>
     [JsonPropertyName("error")]
     public required string Error { get; init; }
 }
@@ -1836,11 +2390,14 @@ public record ControlErrorResponse
 /// </summary>
 public record SdkControlResponse
 {
+    /// <summary>
+    /// Gets the type of the message.
+    /// </summary>
     [JsonPropertyName("type")]
     public string Type { get; init; } = "control_response";
 
     /// <summary>
-    /// Response can be either ControlResponse or ControlErrorResponse.
+    /// Gets the response (can be either ControlResponse or ControlErrorResponse).
     /// </summary>
     [JsonPropertyName("response")]
     public required object Response { get; init; }
