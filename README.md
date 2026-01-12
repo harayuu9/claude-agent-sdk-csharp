@@ -1,6 +1,6 @@
 # Claude Agent SDK for C#
 
-[![NuGet](https://img.shields.io/nuget/v/ClaudeAgentSdk.svg)](https://www.nuget.org/packages/ClaudeAgentSdk/)
+[![NuGet](https://img.shields.io/nuget/v/ClaudeAgentSdk.CSharp.svg)](https://www.nuget.org/packages/ClaudeAgentSdk.CSharp/)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
@@ -37,13 +37,13 @@ Claude Agent SDK for C# provides two main APIs for interacting with Claude Code:
 ### NuGet Package
 
 ```bash
-dotnet add package ClaudeAgentSdk
+dotnet add package ClaudeAgentSdk.CSharp
 ```
 
 Or via Package Manager:
 
 ```powershell
-Install-Package ClaudeAgentSdk
+Install-Package ClaudeAgentSdk.CSharp
 ```
 
 ### From Source
@@ -59,7 +59,7 @@ dotnet build
 ### Simple Query
 
 ```csharp
-using ClaudeAgentSdk;
+using ClaudeAgentSdk.CSharp;
 
 // One-shot query
 await foreach (var message in Query.RunAsync("What is 2 + 2?"))
@@ -78,7 +78,7 @@ await foreach (var message in Query.RunAsync("What is 2 + 2?"))
 ### Interactive Conversation
 
 ```csharp
-using ClaudeAgentSdk;
+using ClaudeAgentSdk.CSharp;
 
 await using var client = new ClaudeSDKClient();
 

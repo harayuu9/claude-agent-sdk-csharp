@@ -1,6 +1,6 @@
 # Claude Agent SDK for C#
 
-[![NuGet](https://img.shields.io/nuget/v/ClaudeAgentSdk.svg)](https://www.nuget.org/packages/ClaudeAgentSdk/)
+[![NuGet](https://img.shields.io/nuget/v/ClaudeAgentSdk.CSharp.svg)](https://www.nuget.org/packages/ClaudeAgentSdk.CSharp/)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
@@ -37,13 +37,13 @@ Claude Agent SDK for C# は、Claude Codeと対話するための2つの主要�
 ### NuGetパッケージ
 
 ```bash
-dotnet add package ClaudeAgentSdk
+dotnet add package ClaudeAgentSdk.CSharp
 ```
 
 またはPackage Manager経由:
 
 ```powershell
-Install-Package ClaudeAgentSdk
+Install-Package ClaudeAgentSdk.CSharp
 ```
 
 ### ソースからビルド
@@ -59,7 +59,7 @@ dotnet build
 ### シンプルなクエリ
 
 ```csharp
-using ClaudeAgentSdk;
+using ClaudeAgentSdk.CSharp;
 
 // 単発クエリ
 await foreach (var message in Query.RunAsync("2 + 2 は?"))
@@ -78,7 +78,7 @@ await foreach (var message in Query.RunAsync("2 + 2 は?"))
 ### 対話型会話
 
 ```csharp
-using ClaudeAgentSdk;
+using ClaudeAgentSdk.CSharp;
 
 await using var client = new ClaudeSDKClient();
 
