@@ -11,7 +11,7 @@
     <!-- NuGet Package Configuration -->
     <PropertyGroup>
         <PackageId>ClaudeAgentSdk</PackageId>
-        <Version>0.1.0</Version>
+        <Version>0.1.0-preview.1</Version>
         <Authors>harayuu9</Authors>
         <Description>C# SDK for integrating with Claude Code CLI. A port of the official claude-agent-sdk-python.</Description>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
