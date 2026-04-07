@@ -125,6 +125,7 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
 
     // Control protocol state
     private readonly ConcurrentDictionary<string, TaskCompletionSource<Dictionary<string, object?>>> _pendingControlResponses = new();
+    private readonly ConcurrentDictionary<string, CancellationTokenSource> _inflightRequests = new();
     private readonly Dictionary<string, HookCallback> _hookCallbacks = new();
     private int _nextCallbackId;
     private int _requestCounter;
@@ -201,8 +202,12 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
     /// <summary>
     /// Initialize control protocol if in streaming mode.
     /// </summary>
+    /// <param name="agents">Optional agent definitions to send in the initialize request.</param>
+    /// <param name="ct">Cancellation token.</param>
     /// <returns>Initialize response with supported commands, or null if not streaming</returns>
-    public async Task<Dictionary<string, object?>?> InitializeAsync(CancellationToken ct = default)
+    public async Task<Dictionary<string, object?>?> InitializeAsync(
+        Dictionary<string, AgentDefinition>? agents = null,
+        CancellationToken ct = default)
     {
         if (!_isStreamingMode)
         {
@@ -218,6 +223,25 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
             ["subtype"] = "initialize",
             ["hooks"] = hooksConfig.Count > 0 ? hooksConfig : null
         };
+
+        // Include agent definitions if provided
+        if (agents != null && agents.Count > 0)
+        {
+            var agentsDict = new Dictionary<string, object?>();
+            foreach (var (name, agent) in agents)
+            {
+                var agentJson = JsonSerializer.Serialize(agent);
+                var agentDict = JsonSerializer.Deserialize<Dictionary<string, object?>>(agentJson);
+                if (agentDict != null)
+                {
+                    // Remove null values
+                    var cleaned = agentDict.Where(kv => kv.Value != null)
+                        .ToDictionary(kv => kv.Key, kv => kv.Value);
+                    agentsDict[name] = cleaned;
+                }
+            }
+            request["agents"] = agentsDict;
+        }
 
         // Use longer timeout for initialize since MCP servers may take time to start
         var response = await SendControlRequestAsync(request, _initializeTimeout, ct);
@@ -316,7 +340,7 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
                         continue;
 
                     case "control_cancel_request":
-                        // TODO: Implement cancellation support
+                        HandleControlCancelRequest(message);
                         continue;
                 }
 
@@ -446,6 +470,16 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
 
     #region Control Request Handling
 
+    private void HandleControlCancelRequest(Dictionary<string, object?> message)
+    {
+        var requestId = GetStringValue(message, "request_id");
+        if (requestId != null && _inflightRequests.TryRemove(requestId, out var cts))
+        {
+            cts.Cancel();
+            cts.Dispose();
+        }
+    }
+
     private async Task HandleControlRequestAsync(Dictionary<string, object?> request)
     {
         var requestId = GetStringValue(request, "request_id") ?? "";
@@ -459,6 +493,10 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
 
         var subtype = GetStringValue(requestData, "subtype");
 
+        // Track inflight requests for cancellation
+        var cts = new CancellationTokenSource();
+        _inflightRequests[requestId] = cts;
+
         try
         {
             var responseData = subtype switch
@@ -471,9 +509,18 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
 
             await SendSuccessResponseAsync(requestId, responseData);
         }
+        catch (OperationCanceledException)
+        {
+            // Request was cancelled via control_cancel_request - don't send error
+        }
         catch (Exception ex)
         {
             await SendErrorResponseAsync(requestId, ex.Message);
+        }
+        finally
+        {
+            _inflightRequests.TryRemove(requestId, out _);
+            cts.Dispose();
         }
     }
 
@@ -504,10 +551,15 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
             }
         }
 
+        var toolUseId = GetStringValue(requestData, "tool_use_id");
+        var agentId = GetStringValue(requestData, "agent_id");
+
         var context = new ToolPermissionContext
         {
             Signal = null,
-            Suggestions = permissionSuggestions
+            Suggestions = permissionSuggestions,
+            ToolUseId = toolUseId,
+            AgentId = agentId
         };
 
         var result = await _canUseTool(toolName, originalInput, context);
@@ -575,10 +627,14 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
         {
             "PreToolUse" => JsonSerializer.Deserialize<PreToolUseHookInput>(json)!,
             "PostToolUse" => JsonSerializer.Deserialize<PostToolUseHookInput>(json)!,
+            "PostToolUseFailure" => JsonSerializer.Deserialize<PostToolUseFailureHookInput>(json)!,
             "UserPromptSubmit" => JsonSerializer.Deserialize<UserPromptSubmitHookInput>(json)!,
             "Stop" => JsonSerializer.Deserialize<StopHookInput>(json)!,
             "SubagentStop" => JsonSerializer.Deserialize<SubagentStopHookInput>(json)!,
+            "SubagentStart" => JsonSerializer.Deserialize<SubagentStartHookInput>(json)!,
             "PreCompact" => JsonSerializer.Deserialize<PreCompactHookInput>(json)!,
+            "Notification" => JsonSerializer.Deserialize<NotificationHookInput>(json)!,
+            "PermissionRequest" => JsonSerializer.Deserialize<PermissionRequestHookInput>(json)!,
             _ => throw new InvalidOperationException($"Unknown hook event name: {hookEventName}")
         };
     }
@@ -885,6 +941,64 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
                 ["subtype"] = "rewind_files",
                 ["user_message_id"] = userMessageId
             }, ct: ct);
+
+    /// <summary>
+    /// Reconnect a disconnected or failed MCP server.
+    /// </summary>
+    public Task ReconnectMcpServerAsync(string serverName, CancellationToken ct = default)
+        => SendControlRequestAsync(
+            new Dictionary<string, object?>
+            {
+                ["subtype"] = "mcp_reconnect",
+                ["serverName"] = serverName
+            }, ct: ct);
+
+    /// <summary>
+    /// Enable or disable an MCP server.
+    /// </summary>
+    public Task ToggleMcpServerAsync(string serverName, bool enabled, CancellationToken ct = default)
+        => SendControlRequestAsync(
+            new Dictionary<string, object?>
+            {
+                ["subtype"] = "mcp_toggle",
+                ["serverName"] = serverName,
+                ["enabled"] = enabled
+            }, ct: ct);
+
+    /// <summary>
+    /// Stop a running task.
+    /// </summary>
+    public Task StopTaskAsync(string taskId, CancellationToken ct = default)
+        => SendControlRequestAsync(
+            new Dictionary<string, object?>
+            {
+                ["subtype"] = "stop_task",
+                ["task_id"] = taskId
+            }, ct: ct);
+
+    /// <summary>
+    /// Get MCP server status.
+    /// </summary>
+    public async Task<McpStatusResponse> GetMcpStatusAsync(CancellationToken ct = default)
+    {
+        var response = await SendControlRequestAsync(
+            new Dictionary<string, object?> { ["subtype"] = "mcp_status" }, ct: ct);
+        var json = JsonSerializer.Serialize(response);
+        return JsonSerializer.Deserialize<McpStatusResponse>(json)
+            ?? new McpStatusResponse { McpServers = [] };
+    }
+
+    /// <summary>
+    /// Get context usage breakdown.
+    /// </summary>
+    public async Task<ContextUsageResponse> GetContextUsageAsync(CancellationToken ct = default)
+    {
+        var response = await SendControlRequestAsync(
+            new Dictionary<string, object?> { ["subtype"] = "get_context_usage" }, ct: ct);
+        var json = JsonSerializer.Serialize(response);
+        return JsonSerializer.Deserialize<ContextUsageResponse>(json)
+            ?? throw new ClaudeSDKException("Failed to deserialize context usage response");
+    }
 
     #endregion
 

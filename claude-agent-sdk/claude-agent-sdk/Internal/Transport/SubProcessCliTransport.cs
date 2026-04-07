@@ -112,13 +112,21 @@ internal class SubprocessCliTransport : Transport
                 startInfo.ArgumentList.Add(command[i]);
             }
 
+            // Filter CLAUDECODE env var from inherited environment
+            startInfo.Environment.Remove("CLAUDECODE");
+
             // Merge environment variables: system -> user -> SDK required
             foreach (var kvp in _options.Env)
             {
                 startInfo.Environment[kvp.Key] = kvp.Value;
             }
 
-            startInfo.Environment["CLAUDE_CODE_ENTRYPOINT"] = "sdk-csharp";
+            // Set CLAUDE_CODE_ENTRYPOINT only if not already set (by user env or inherited)
+            if (!startInfo.Environment.ContainsKey("CLAUDE_CODE_ENTRYPOINT") ||
+                string.IsNullOrEmpty(startInfo.Environment["CLAUDE_CODE_ENTRYPOINT"]))
+            {
+                startInfo.Environment["CLAUDE_CODE_ENTRYPOINT"] = "sdk-csharp";
+            }
             startInfo.Environment["CLAUDE_AGENT_SDK_VERSION"] = SdkVersion;
 
             if (_options.EnableFileCheckpointing)
@@ -263,17 +271,31 @@ internal class SubprocessCliTransport : Transport
             _stderrReader = null;
         }
 
-        // Terminate and wait for process
+        // Graceful shutdown: wait up to 5 seconds before forceful kill
         if (!_process.HasExited)
         {
             try
             {
-                _process.Kill();
-                await _process.WaitForExitAsync().ConfigureAwait(false);
+                // Wait for graceful exit after stdin was closed
+                using var graceCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                await _process.WaitForExitAsync(graceCts.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Graceful wait timed out, force kill
+                try
+                {
+                    _process.Kill();
+                    await _process.WaitForExitAsync().ConfigureAwait(false);
+                }
+                catch
+                {
+                    // Ignore errors during force kill
+                }
             }
             catch
             {
-                // Ignore errors during cleanup
+                // Ignore other errors during cleanup
             }
         }
 
@@ -380,6 +402,12 @@ internal class SubprocessCliTransport : Transport
                 var trimmedLine = jsonLine.Trim();
                 if (string.IsNullOrEmpty(trimmedLine))
                     continue;
+
+                // Skip non-JSON lines (e.g., [SandboxDebug] output) when not mid-parse
+                if (jsonBuffer.Length == 0 && !trimmedLine.StartsWith('{'))
+                {
+                    continue;
+                }
 
                 // Keep accumulating partial JSON until we can parse it
                 jsonBuffer.Append(trimmedLine);
@@ -660,6 +688,19 @@ internal class SubprocessCliTransport : Transport
                 cmd.AddRange(["--append-system-prompt", preset.Append]);
             }
         }
+        else if (_options.SystemPrompt is SystemPromptFile promptFile)
+        {
+            cmd.AddRange(["--system-prompt-file", promptFile.Path]);
+        }
+        else if (_options.SystemPrompt is JsonElement je && je.ValueKind == JsonValueKind.Object)
+        {
+            // Handle deserialized SystemPromptFile from JSON
+            if (je.TryGetProperty("type", out var t) && t.GetString() == "file" &&
+                je.TryGetProperty("path", out var p))
+            {
+                cmd.AddRange(["--system-prompt-file", p.GetString() ?? ""]);
+            }
+        }
 
         // Handle tools option (base set of tools)
         if (_options.Tools != null)
@@ -799,11 +840,12 @@ internal class SubprocessCliTransport : Transport
             cmd.AddRange(["--agents", agentsJson]);
         }
 
-        // Handle setting sources
-        var sourcesValue = _options.SettingSources != null
-            ? string.Join(",", _options.SettingSources.Select(GetSettingSourceValue))
-            : "";
-        cmd.AddRange(["--setting-sources", sourcesValue]);
+        // Handle setting sources (omit flag when empty or unset)
+        if (_options.SettingSources != null && _options.SettingSources.Count > 0)
+        {
+            var sourcesValue = string.Join(",", _options.SettingSources.Select(GetSettingSourceValue));
+            cmd.AddRange(["--setting-sources", sourcesValue]);
+        }
 
         // Add plugin directories
         foreach (var plugin in _options.Plugins)
@@ -833,7 +875,42 @@ internal class SubprocessCliTransport : Transport
             }
         }
 
-        if (_options.MaxThinkingTokens.HasValue)
+        // Session ID
+        if (!string.IsNullOrEmpty(_options.SessionId))
+        {
+            cmd.AddRange(["--session-id", _options.SessionId]);
+        }
+
+        // Effort level
+        if (!string.IsNullOrEmpty(_options.Effort))
+        {
+            cmd.AddRange(["--effort", _options.Effort]);
+        }
+
+        // Task budget
+        if (_options.TaskBudget != null)
+        {
+            cmd.AddRange(["--task-budget", _options.TaskBudget.Total.ToString()]);
+        }
+
+        // Thinking configuration (takes precedence over max_thinking_tokens)
+        if (_options.Thinking != null)
+        {
+            switch (_options.Thinking)
+            {
+                case ThinkingConfigAdaptive:
+                    cmd.AddRange(["--thinking-mode", "adaptive"]);
+                    break;
+                case ThinkingConfigEnabled enabled:
+                    cmd.AddRange(["--thinking-mode", "enabled"]);
+                    cmd.AddRange(["--thinking-budget-tokens", enabled.BudgetTokens.ToString()]);
+                    break;
+                case ThinkingConfigDisabled:
+                    cmd.AddRange(["--thinking-mode", "disabled"]);
+                    break;
+            }
+        }
+        else if (_options.MaxThinkingTokens.HasValue)
         {
             cmd.AddRange(["--max-thinking-tokens", _options.MaxThinkingTokens.Value.ToString()]);
         }
@@ -991,6 +1068,8 @@ internal class SubprocessCliTransport : Transport
             PermissionMode.AcceptEdits => "acceptEdits",
             PermissionMode.Plan => "plan",
             PermissionMode.BypassPermissions => "bypassPermissions",
+            PermissionMode.DontAsk => "dontAsk",
+            PermissionMode.Auto => "auto",
             _ => throw new ArgumentException($"Unknown permission mode: {mode}")
         };
     }

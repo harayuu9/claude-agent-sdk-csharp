@@ -21,9 +21,14 @@ Claude Agent SDK for C# provides two main APIs for interacting with Claude Code:
 
 - Two flexible APIs for different use cases
 - MCP (Model Context Protocol) support for custom tools
-- Custom agent definitions
-- Hooks for event handling (PreToolUse, PostToolUse, etc.)
-- Tool permission control
+- Custom agent definitions with extended configuration
+- Hooks for event handling (PreToolUse, PostToolUse, Notification, etc.)
+- Tool permission control with agent context
+- Session management (list, rename, tag, fork, delete)
+- MCP server control (status, reconnect, toggle)
+- Context usage monitoring
+- Task management (start, progress, stop)
+- Extended thinking configuration
 - Streaming support with `IAsyncEnumerable`
 
 ## Prerequisites
@@ -59,7 +64,7 @@ dotnet build
 ### Simple Query
 
 ```csharp
-using ClaudeAgentSdk.CSharp;
+using ClaudeAgentSdk;
 
 // One-shot query
 await foreach (var message in Query.RunAsync("What is 2 + 2?"))
@@ -78,7 +83,7 @@ await foreach (var message in Query.RunAsync("What is 2 + 2?"))
 ### Interactive Conversation
 
 ```csharp
-using ClaudeAgentSdk.CSharp;
+using ClaudeAgentSdk;
 
 await using var client = new ClaudeSDKClient();
 
@@ -110,13 +115,30 @@ var options = new ClaudeAgentOptions
     Cwd = "/path/to/project",
     AllowedTools = ["Read", "Write", "Bash"],
     PermissionMode = PermissionMode.AcceptEdits,
-    MaxTurns = 10
+    MaxTurns = 10,
+    // New: Extended thinking
+    Thinking = new ThinkingConfigAdaptive(),
+    // New: Effort level
+    Effort = "high",
+    // New: Session ID
+    SessionId = "my-session-id",
+    // New: Task budget
+    TaskBudget = new TaskBudget { Total = 100000 }
 };
 
 await foreach (var message in Query.RunAsync("Create a web server", options))
 {
     // ...
 }
+```
+
+### System Prompt from File
+
+```csharp
+var options = new ClaudeAgentOptions
+{
+    SystemPrompt = new SystemPromptFile { Path = "/path/to/prompt.txt" }
+};
 ```
 
 ### MCP Tools
@@ -154,7 +176,29 @@ public class CalculatorTools
     }
 }
 
-var server = SdkMcpServer.FromType<CalculatorTools>();
+var server = SdkMcpServer.FromType<CalculatorTools>("calculator");
+```
+
+### MCP Server Control
+
+Monitor and control MCP server connections at runtime:
+
+```csharp
+await using var client = new ClaudeSDKClient(options);
+await client.ConnectAsync();
+
+// Get status of all MCP servers
+var status = await client.GetMcpStatusAsync();
+foreach (var server in status.McpServers)
+{
+    Console.WriteLine($"{server.Name}: {server.Status}");
+}
+
+// Reconnect a failed server
+await client.ReconnectMcpServerAsync("my-server");
+
+// Toggle a server on/off
+await client.ToggleMcpServerAsync("my-server", enabled: false);
 ```
 
 ### Custom Agents
@@ -171,7 +215,14 @@ var options = new ClaudeAgentOptions
             Description = "Reviews code for issues and best practices",
             Prompt = "You are a code reviewer. Analyze code for bugs, security issues, and style.",
             Tools = ["Read", "Grep", "Glob"],
-            Model = AgentModel.Sonnet
+            Model = "sonnet",
+            // New fields
+            DisallowedTools = ["Write", "Bash"],
+            Skills = ["code-review"],
+            MaxTurns = 5,
+            Background = false,
+            Effort = "high",
+            PermissionMode = PermissionMode.Default
         }
     }
 };
@@ -191,39 +242,189 @@ var options = new ClaudeAgentOptions
             new HookMatcher
             {
                 Matcher = "Bash",
-                Hooks = [ValidateBashCommandAsync]
+                Hooks =
+                [
+                    async (input, toolUseId, context) =>
+                    {
+                        if (input is PreToolUseHookInput preToolUse)
+                        {
+                            var command = preToolUse.ToolInput["command"]?.ToString();
+                            if (command?.Contains("rm -rf") == true)
+                                return new SyncHookJsonOutput { Continue = false, StopReason = "Dangerous command blocked" };
+                        }
+                        return new SyncHookJsonOutput { Continue = true };
+                    }
+                ]
+            }
+        ],
+        // New hook events
+        [HookEvent.PostToolUseFailure] =
+        [
+            new HookMatcher
+            {
+                Hooks =
+                [
+                    async (input, toolUseId, context) =>
+                    {
+                        if (input is PostToolUseFailureHookInput failure)
+                            Console.WriteLine($"Tool {failure.ToolName} failed: {failure.Error}");
+                        return new SyncHookJsonOutput { Continue = true };
+                    }
+                ]
+            }
+        ],
+        [HookEvent.Notification] =
+        [
+            new HookMatcher
+            {
+                Hooks =
+                [
+                    async (input, toolUseId, context) =>
+                    {
+                        if (input is NotificationHookInput notification)
+                            Console.WriteLine($"Notification: {notification.Message}");
+                        return new SyncHookJsonOutput { Continue = true };
+                    }
+                ]
             }
         ]
     }
 };
-
-async Task<HookResult> ValidateBashCommandAsync(HookInput input)
-{
-    var command = input.ToolInput["command"]?.ToString();
-    if (command?.Contains("rm -rf") == true)
-        return HookResult.Block("Dangerous command blocked");
-    return HookResult.Allow();
-}
 ```
 
 ### Tool Permission Control
 
-Fine-grained control over tool execution:
+Fine-grained control over tool execution with agent context:
 
 ```csharp
 var options = new ClaudeAgentOptions
 {
-    CanUseTool = async (callback) =>
+    CanUseTool = async (toolName, input, context) =>
     {
-        if (callback.ToolName == "Bash")
+        // Access tool_use_id and agent_id from context
+        Console.WriteLine($"Tool: {toolName}, ToolUseId: {context.ToolUseId}, AgentId: {context.AgentId}");
+
+        if (toolName == "Bash")
         {
-            var command = callback.Input["command"]?.ToString();
+            var command = input["command"]?.ToString();
             if (command?.Contains("sudo") == true)
-                return ToolPermissionResult.Deny("sudo not allowed");
+                return new PermissionResultDeny { Message = "sudo not allowed" };
         }
-        return ToolPermissionResult.Allow();
+        return new PermissionResultAllow();
     }
 };
+```
+
+### Context Usage Monitoring
+
+Monitor token usage and context window:
+
+```csharp
+await using var client = new ClaudeSDKClient(options);
+await client.ConnectAsync("Hello");
+
+var usage = await client.GetContextUsageAsync();
+Console.WriteLine($"Total tokens: {usage.TotalTokens}/{usage.MaxTokens} ({usage.Percentage:F1}%)");
+foreach (var category in usage.Categories)
+{
+    Console.WriteLine($"  {category.Name}: {category.Tokens} tokens");
+}
+```
+
+### Task Management
+
+Monitor and control background tasks:
+
+```csharp
+await using var client = new ClaudeSDKClient(options);
+await client.ConnectAsync("Run a complex analysis");
+
+await foreach (var msg in client.ReceiveMessagesAsync())
+{
+    switch (msg)
+    {
+        case TaskStartedMessage started:
+            Console.WriteLine($"Task started: {started.Description}");
+            break;
+        case TaskProgressMessage progress:
+            Console.WriteLine($"Task progress: {progress.Description} ({progress.Usage.TotalTokens} tokens)");
+            break;
+        case TaskNotificationMessage notification:
+            Console.WriteLine($"Task {notification.Status}: {notification.Summary}");
+            break;
+        case RateLimitEvent rateLimit:
+            Console.WriteLine($"Rate limit: {rateLimit.RateLimitInfo.Status}");
+            break;
+        case ResultMessage result:
+            Console.WriteLine($"Done! Cost: ${result.TotalCostUsd}");
+            break;
+    }
+}
+
+// Stop a running task
+await client.StopTaskAsync("task-id");
+```
+
+### Extended Thinking
+
+Configure Claude's thinking behavior:
+
+```csharp
+// Adaptive thinking (Claude decides when to think)
+var options = new ClaudeAgentOptions
+{
+    Thinking = new ThinkingConfigAdaptive()
+};
+
+// Fixed thinking budget
+var options2 = new ClaudeAgentOptions
+{
+    Thinking = new ThinkingConfigEnabled { BudgetTokens = 10000 }
+};
+
+// Disable thinking
+var options3 = new ClaudeAgentOptions
+{
+    Thinking = new ThinkingConfigDisabled()
+};
+```
+
+### Session Management
+
+Manage Claude session history programmatically:
+
+```csharp
+using ClaudeAgentSdk;
+
+// List sessions
+var sessions = Sessions.ListSessions(directory: "/path/to/project");
+foreach (var session in sessions)
+{
+    Console.WriteLine($"{session.SessionId}: {session.Summary} (modified: {session.LastModified})");
+}
+
+// Get session info
+var info = Sessions.GetSessionInfo("session-uuid", directory: "/path/to/project");
+
+// Read session messages
+var messages = Sessions.GetSessionMessages("session-uuid");
+foreach (var msg in messages)
+{
+    Console.WriteLine($"[{msg.Type}] {msg.Uuid}");
+}
+
+// Rename a session
+SessionMutations.RenameSession("session-uuid", "My Custom Title");
+
+// Tag a session
+SessionMutations.TagSession("session-uuid", "important");
+
+// Fork a session
+var result = SessionMutations.ForkSession("session-uuid", title: "Forked experiment");
+Console.WriteLine($"New session: {result.SessionId}");
+
+// Delete a session
+SessionMutations.DeleteSession("session-uuid");
 ```
 
 ## Examples

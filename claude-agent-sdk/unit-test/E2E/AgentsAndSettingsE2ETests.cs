@@ -28,7 +28,7 @@ public class AgentsAndSettingsE2ETests : E2ETestBase
                     Description = "A test agent for verification",
                     Prompt = "You are a test agent. Always respond with 'Test agent activated'",
                     Tools = ["Read"],
-                    Model = AgentModel.Sonnet
+                    Model = "sonnet"
                 }
             },
             MaxTurns = 1,

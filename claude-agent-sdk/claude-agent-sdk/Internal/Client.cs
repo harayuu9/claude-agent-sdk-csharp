@@ -77,7 +77,7 @@ internal class InternalClient
             // Initialize if streaming
             if (isStreaming)
             {
-                await query.InitializeAsync(ct);
+                await query.InitializeAsync(configuredOptions.Agents, ct);
             }
 
             // 6. Stream input if it's an IAsyncEnumerable (streaming mode)
@@ -93,7 +93,11 @@ internal class InternalClient
             {
                 // Convert Dictionary to JsonElement for MessageParser
                 var jsonElement = DictToJsonElement(data);
-                yield return MessageParser.ParseMessage(jsonElement);
+                var message = MessageParser.ParseMessage(jsonElement);
+                if (message != null)
+                {
+                    yield return message;
+                }
             }
         }
         finally

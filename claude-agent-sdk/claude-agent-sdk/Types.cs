@@ -33,7 +33,19 @@ public enum PermissionMode
     /// Bypass all permission checks (use with caution).
     /// </summary>
     [JsonStringEnumMemberName("bypassPermissions")]
-    BypassPermissions
+    BypassPermissions,
+
+    /// <summary>
+    /// Allow all tools without prompting.
+    /// </summary>
+    [JsonStringEnumMemberName("dontAsk")]
+    DontAsk,
+
+    /// <summary>
+    /// Automatically determine permission mode.
+    /// </summary>
+    [JsonStringEnumMemberName("auto")]
+    Auto
 }
 
 /// <summary>
@@ -171,7 +183,31 @@ public enum HookEvent
     /// Triggered before context compaction.
     /// </summary>
     [JsonStringEnumMemberName("PreCompact")]
-    PreCompact
+    PreCompact,
+
+    /// <summary>
+    /// Triggered when a tool use fails.
+    /// </summary>
+    [JsonStringEnumMemberName("PostToolUseFailure")]
+    PostToolUseFailure,
+
+    /// <summary>
+    /// Triggered for system notifications.
+    /// </summary>
+    [JsonStringEnumMemberName("Notification")]
+    Notification,
+
+    /// <summary>
+    /// Triggered when a subagent starts.
+    /// </summary>
+    [JsonStringEnumMemberName("SubagentStart")]
+    SubagentStart,
+
+    /// <summary>
+    /// Triggered on permission requests.
+    /// </summary>
+    [JsonStringEnumMemberName("PermissionRequest")]
+    PermissionRequest
 }
 
 /// <summary>
@@ -263,6 +299,7 @@ public enum PermissionUpdateType
 /// <summary>
 /// Model types for agent definition.
 /// </summary>
+[Obsolete("Use string model IDs directly in AgentDefinition.Model instead.")]
 [JsonConverter(typeof(JsonStringEnumConverter<AgentModel>))]
 public enum AgentModel
 {
@@ -359,6 +396,24 @@ public enum McpServerType
 #region Preset Types
 
 /// <summary>
+/// System prompt file configuration for loading from a file path.
+/// </summary>
+public record SystemPromptFile
+{
+    /// <summary>
+    /// Gets the type of the system prompt configuration.
+    /// </summary>
+    [JsonPropertyName("type")]
+    public string Type { get; init; } = "file";
+
+    /// <summary>
+    /// Gets the file path to load the system prompt from.
+    /// </summary>
+    [JsonPropertyName("path")]
+    public required string Path { get; init; }
+}
+
+/// <summary>
 /// System prompt preset configuration.
 /// </summary>
 public record SystemPromptPreset
@@ -430,11 +485,74 @@ public record AgentDefinition
     public List<string>? Tools { get; init; }
 
     /// <summary>
-    /// Gets the model to use for the agent.
+    /// Gets the list of disallowed tool names.
+    /// </summary>
+    [JsonPropertyName("disallowedTools")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<string>? DisallowedTools { get; init; }
+
+    /// <summary>
+    /// Gets the model to use for the agent. Can be a full model ID string.
     /// </summary>
     [JsonPropertyName("model")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public AgentModel? Model { get; init; }
+    public string? Model { get; init; }
+
+    /// <summary>
+    /// Gets the list of skill names available to the agent.
+    /// </summary>
+    [JsonPropertyName("skills")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<string>? Skills { get; init; }
+
+    /// <summary>
+    /// Gets the memory scope for the agent ("user", "project", "local").
+    /// </summary>
+    [JsonPropertyName("memory")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Memory { get; init; }
+
+    /// <summary>
+    /// Gets the MCP server configurations for the agent.
+    /// </summary>
+    [JsonPropertyName("mcpServers")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<object>? McpServers { get; init; }
+
+    /// <summary>
+    /// Gets the initial prompt for the agent.
+    /// </summary>
+    [JsonPropertyName("initialPrompt")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? InitialPrompt { get; init; }
+
+    /// <summary>
+    /// Gets the maximum number of conversation turns.
+    /// </summary>
+    [JsonPropertyName("maxTurns")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? MaxTurns { get; init; }
+
+    /// <summary>
+    /// Gets whether to run the agent in the background.
+    /// </summary>
+    [JsonPropertyName("background")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? Background { get; init; }
+
+    /// <summary>
+    /// Gets the effort level for the agent ("low", "medium", "high", "max").
+    /// </summary>
+    [JsonPropertyName("effort")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public object? Effort { get; init; }
+
+    /// <summary>
+    /// Gets the permission mode for the agent.
+    /// </summary>
+    [JsonPropertyName("permissionMode")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public PermissionMode? PermissionMode { get; init; }
 }
 
 #endregion
@@ -572,6 +690,20 @@ public record ToolPermissionContext
     /// </summary>
     [JsonPropertyName("suggestions")]
     public List<PermissionUpdate> Suggestions { get; init; } = [];
+
+    /// <summary>
+    /// Gets the unique identifier for the specific tool call.
+    /// </summary>
+    [JsonPropertyName("tool_use_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ToolUseId { get; init; }
+
+    /// <summary>
+    /// Gets the sub-agent ID if running within a sub-agent context.
+    /// </summary>
+    [JsonPropertyName("agent_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? AgentId { get; init; }
 }
 
 /// <summary>
@@ -711,6 +843,27 @@ public record PreToolUseHookInput : BaseHookInput
     /// </summary>
     [JsonPropertyName("tool_input")]
     public required Dictionary<string, object?> ToolInput { get; init; }
+
+    /// <summary>
+    /// Gets the unique tool call identifier.
+    /// </summary>
+    [JsonPropertyName("tool_use_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ToolUseId { get; init; }
+
+    /// <summary>
+    /// Gets the sub-agent ID if applicable.
+    /// </summary>
+    [JsonPropertyName("agent_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? AgentId { get; init; }
+
+    /// <summary>
+    /// Gets the sub-agent type if applicable.
+    /// </summary>
+    [JsonPropertyName("agent_type")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? AgentType { get; init; }
 }
 
 /// <summary>
@@ -741,6 +894,27 @@ public record PostToolUseHookInput : BaseHookInput
     /// </summary>
     [JsonPropertyName("tool_response")]
     public object? ToolResponse { get; init; }
+
+    /// <summary>
+    /// Gets the unique tool call identifier.
+    /// </summary>
+    [JsonPropertyName("tool_use_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ToolUseId { get; init; }
+
+    /// <summary>
+    /// Gets the sub-agent ID if applicable.
+    /// </summary>
+    [JsonPropertyName("agent_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? AgentId { get; init; }
+
+    /// <summary>
+    /// Gets the sub-agent type if applicable.
+    /// </summary>
+    [JsonPropertyName("agent_type")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? AgentType { get; init; }
 }
 
 /// <summary>
@@ -795,6 +969,27 @@ public record SubagentStopHookInput : BaseHookInput
     /// </summary>
     [JsonPropertyName("stop_hook_active")]
     public required bool StopHookActive { get; init; }
+
+    /// <summary>
+    /// Gets the sub-agent ID.
+    /// </summary>
+    [JsonPropertyName("agent_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? AgentId { get; init; }
+
+    /// <summary>
+    /// Gets the path to the agent transcript.
+    /// </summary>
+    [JsonPropertyName("agent_transcript_path")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? AgentTranscriptPath { get; init; }
+
+    /// <summary>
+    /// Gets the agent type name.
+    /// </summary>
+    [JsonPropertyName("agent_type")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? AgentType { get; init; }
 }
 
 /// <summary>
@@ -820,6 +1015,163 @@ public record PreCompactHookInput : BaseHookInput
     [JsonPropertyName("custom_instructions")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? CustomInstructions { get; init; }
+}
+
+/// <summary>
+/// Input data for PostToolUseFailure hook events.
+/// </summary>
+public record PostToolUseFailureHookInput : BaseHookInput
+{
+    /// <summary>
+    /// Gets the name of the hook event.
+    /// </summary>
+    [JsonPropertyName("hook_event_name")]
+    public override string HookEventName => "PostToolUseFailure";
+
+    /// <summary>
+    /// Gets the name of the tool that failed.
+    /// </summary>
+    [JsonPropertyName("tool_name")]
+    public required string ToolName { get; init; }
+
+    /// <summary>
+    /// Gets the input parameters that were passed to the tool.
+    /// </summary>
+    [JsonPropertyName("tool_input")]
+    public required Dictionary<string, object?> ToolInput { get; init; }
+
+    /// <summary>
+    /// Gets the unique tool call identifier.
+    /// </summary>
+    [JsonPropertyName("tool_use_id")]
+    public required string ToolUseId { get; init; }
+
+    /// <summary>
+    /// Gets the error message.
+    /// </summary>
+    [JsonPropertyName("error")]
+    public required string Error { get; init; }
+
+    /// <summary>
+    /// Gets whether this failure caused an interrupt.
+    /// </summary>
+    [JsonPropertyName("is_interrupt")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? IsInterrupt { get; init; }
+
+    /// <summary>
+    /// Gets the sub-agent ID if applicable.
+    /// </summary>
+    [JsonPropertyName("agent_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? AgentId { get; init; }
+
+    /// <summary>
+    /// Gets the sub-agent type if applicable.
+    /// </summary>
+    [JsonPropertyName("agent_type")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? AgentType { get; init; }
+}
+
+/// <summary>
+/// Input data for Notification hook events.
+/// </summary>
+public record NotificationHookInput : BaseHookInput
+{
+    /// <summary>
+    /// Gets the name of the hook event.
+    /// </summary>
+    [JsonPropertyName("hook_event_name")]
+    public override string HookEventName => "Notification";
+
+    /// <summary>
+    /// Gets the notification message.
+    /// </summary>
+    [JsonPropertyName("message")]
+    public required string Message { get; init; }
+
+    /// <summary>
+    /// Gets the notification title.
+    /// </summary>
+    [JsonPropertyName("title")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Title { get; init; }
+
+    /// <summary>
+    /// Gets the notification type.
+    /// </summary>
+    [JsonPropertyName("notification_type")]
+    public required string NotificationType { get; init; }
+}
+
+/// <summary>
+/// Input data for SubagentStart hook events.
+/// </summary>
+public record SubagentStartHookInput : BaseHookInput
+{
+    /// <summary>
+    /// Gets the name of the hook event.
+    /// </summary>
+    [JsonPropertyName("hook_event_name")]
+    public override string HookEventName => "SubagentStart";
+
+    /// <summary>
+    /// Gets the sub-agent ID.
+    /// </summary>
+    [JsonPropertyName("agent_id")]
+    public required string AgentId { get; init; }
+
+    /// <summary>
+    /// Gets the sub-agent type.
+    /// </summary>
+    [JsonPropertyName("agent_type")]
+    public required string AgentType { get; init; }
+}
+
+/// <summary>
+/// Input data for PermissionRequest hook events.
+/// </summary>
+public record PermissionRequestHookInput : BaseHookInput
+{
+    /// <summary>
+    /// Gets the name of the hook event.
+    /// </summary>
+    [JsonPropertyName("hook_event_name")]
+    public override string HookEventName => "PermissionRequest";
+
+    /// <summary>
+    /// Gets the name of the tool requesting permission.
+    /// </summary>
+    [JsonPropertyName("tool_name")]
+    public required string ToolName { get; init; }
+
+    /// <summary>
+    /// Gets the input parameters for the tool.
+    /// </summary>
+    [JsonPropertyName("tool_input")]
+    public required Dictionary<string, object?> ToolInput { get; init; }
+
+    /// <summary>
+    /// Gets the permission suggestions.
+    /// </summary>
+    [JsonPropertyName("permission_suggestions")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<object>? PermissionSuggestions { get; init; }
+
+    /// <summary>
+    /// Gets the sub-agent ID if applicable.
+    /// </summary>
+    [JsonPropertyName("agent_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? AgentId { get; init; }
+
+    /// <summary>
+    /// Gets the sub-agent type if applicable.
+    /// </summary>
+    [JsonPropertyName("agent_type")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? AgentType { get; init; }
 }
 
 /// <summary>
@@ -884,6 +1236,13 @@ public record PreToolUseHookSpecificOutput : HookSpecificOutput
     [JsonPropertyName("updatedInput")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Dictionary<string, object?>? UpdatedInput { get; init; }
+
+    /// <summary>
+    /// Gets additional context information from the hook.
+    /// </summary>
+    [JsonPropertyName("additionalContext")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? AdditionalContext { get; init; }
 }
 
 /// <summary>
@@ -903,6 +1262,13 @@ public record PostToolUseHookSpecificOutput : HookSpecificOutput
     [JsonPropertyName("additionalContext")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? AdditionalContext { get; init; }
+
+    /// <summary>
+    /// Gets the updated MCP tool output.
+    /// </summary>
+    [JsonPropertyName("updatedMCPToolOutput")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public object? UpdatedMCPToolOutput { get; init; }
 }
 
 /// <summary>
@@ -922,6 +1288,82 @@ public record UserPromptSubmitHookSpecificOutput : HookSpecificOutput
     [JsonPropertyName("additionalContext")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? AdditionalContext { get; init; }
+}
+
+/// <summary>
+/// Hook-specific output for PostToolUseFailure events.
+/// </summary>
+public record PostToolUseFailureHookSpecificOutput : HookSpecificOutput
+{
+    /// <summary>
+    /// Gets the name of the hook event.
+    /// </summary>
+    [JsonPropertyName("hookEventName")]
+    public override string HookEventName => "PostToolUseFailure";
+
+    /// <summary>
+    /// Gets additional context information.
+    /// </summary>
+    [JsonPropertyName("additionalContext")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? AdditionalContext { get; init; }
+}
+
+/// <summary>
+/// Hook-specific output for Notification events.
+/// </summary>
+public record NotificationHookSpecificOutput : HookSpecificOutput
+{
+    /// <summary>
+    /// Gets the name of the hook event.
+    /// </summary>
+    [JsonPropertyName("hookEventName")]
+    public override string HookEventName => "Notification";
+
+    /// <summary>
+    /// Gets additional context information.
+    /// </summary>
+    [JsonPropertyName("additionalContext")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? AdditionalContext { get; init; }
+}
+
+/// <summary>
+/// Hook-specific output for SubagentStart events.
+/// </summary>
+public record SubagentStartHookSpecificOutput : HookSpecificOutput
+{
+    /// <summary>
+    /// Gets the name of the hook event.
+    /// </summary>
+    [JsonPropertyName("hookEventName")]
+    public override string HookEventName => "SubagentStart";
+
+    /// <summary>
+    /// Gets additional context information.
+    /// </summary>
+    [JsonPropertyName("additionalContext")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? AdditionalContext { get; init; }
+}
+
+/// <summary>
+/// Hook-specific output for PermissionRequest events.
+/// </summary>
+public record PermissionRequestHookSpecificOutput : HookSpecificOutput
+{
+    /// <summary>
+    /// Gets the name of the hook event.
+    /// </summary>
+    [JsonPropertyName("hookEventName")]
+    public override string HookEventName => "PermissionRequest";
+
+    /// <summary>
+    /// Gets the permission decision.
+    /// </summary>
+    [JsonPropertyName("decision")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string, object?>? Decision { get; init; }
 }
 
 /// <summary>
@@ -1477,6 +1919,10 @@ public record ToolResultBlock : ContentBlock
 [JsonDerivedType(typeof(SystemMessage), "system")]
 [JsonDerivedType(typeof(ResultMessage), "result")]
 [JsonDerivedType(typeof(StreamEvent), "stream_event")]
+[JsonDerivedType(typeof(TaskStartedMessage), "task_started")]
+[JsonDerivedType(typeof(TaskProgressMessage), "task_progress")]
+[JsonDerivedType(typeof(TaskNotificationMessage), "task_notification")]
+[JsonDerivedType(typeof(RateLimitEvent), "rate_limit")]
 public abstract record Message;
 
 /// <summary>
@@ -1503,6 +1949,13 @@ public record UserMessage : Message
     [JsonPropertyName("parent_tool_use_id")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ParentToolUseId { get; init; }
+
+    /// <summary>
+    /// Gets the tool use result data.
+    /// </summary>
+    [JsonPropertyName("tool_use_result")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string, object?>? ToolUseResult { get; init; }
 }
 
 /// <summary>
@@ -1535,6 +1988,41 @@ public record AssistantMessage : Message
     [JsonPropertyName("error")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public AssistantMessageError? Error { get; init; }
+
+    /// <summary>
+    /// Gets the token usage statistics for this message.
+    /// </summary>
+    [JsonPropertyName("usage")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string, object?>? Usage { get; init; }
+
+    /// <summary>
+    /// Gets the unique message identifier.
+    /// </summary>
+    [JsonPropertyName("message_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? MessageId { get; init; }
+
+    /// <summary>
+    /// Gets the reason for stopping.
+    /// </summary>
+    [JsonPropertyName("stop_reason")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? StopReason { get; init; }
+
+    /// <summary>
+    /// Gets the session ID.
+    /// </summary>
+    [JsonPropertyName("session_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? SessionId { get; init; }
+
+    /// <summary>
+    /// Gets the unique UUID for the message.
+    /// </summary>
+    [JsonPropertyName("uuid")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Uuid { get; init; }
 }
 
 /// <summary>
@@ -1623,6 +2111,41 @@ public record ResultMessage : Message
     [JsonPropertyName("structured_output")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public object? StructuredOutput { get; init; }
+
+    /// <summary>
+    /// Gets the reason for stopping.
+    /// </summary>
+    [JsonPropertyName("stop_reason")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? StopReason { get; init; }
+
+    /// <summary>
+    /// Gets the model-specific usage information.
+    /// </summary>
+    [JsonPropertyName("model_usage")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string, object?>? ModelUsage { get; init; }
+
+    /// <summary>
+    /// Gets the list of permission denials.
+    /// </summary>
+    [JsonPropertyName("permission_denials")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<object>? PermissionDenials { get; init; }
+
+    /// <summary>
+    /// Gets the list of error messages.
+    /// </summary>
+    [JsonPropertyName("errors")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<string>? Errors { get; init; }
+
+    /// <summary>
+    /// Gets the unique UUID.
+    /// </summary>
+    [JsonPropertyName("uuid")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Uuid { get; init; }
 }
 
 /// <summary>
@@ -1892,6 +2415,34 @@ public record ClaudeAgentOptions
     /// </summary>
     [JsonPropertyName("enable_file_checkpointing")]
     public bool EnableFileCheckpointing { get; init; } = false;
+
+    /// <summary>
+    /// Session identifier for multi-session support.
+    /// </summary>
+    [JsonPropertyName("session_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? SessionId { get; init; }
+
+    /// <summary>
+    /// Extended thinking configuration. Takes precedence over MaxThinkingTokens.
+    /// </summary>
+    [JsonPropertyName("thinking")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ThinkingConfig? Thinking { get; init; }
+
+    /// <summary>
+    /// Effort level for thinking depth ("low", "medium", "high", "max").
+    /// </summary>
+    [JsonPropertyName("effort")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Effort { get; init; }
+
+    /// <summary>
+    /// API-side task budget in tokens.
+    /// </summary>
+    [JsonPropertyName("task_budget")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public TaskBudget? TaskBudget { get; init; }
 }
 
 #endregion
@@ -2143,6 +2694,11 @@ public static class SdkMcpTool
 [JsonDerivedType(typeof(SdkHookCallbackRequest), "hook_callback")]
 [JsonDerivedType(typeof(SdkControlMcpMessageRequest), "mcp_message")]
 [JsonDerivedType(typeof(SdkControlRewindFilesRequest), "rewind_files")]
+[JsonDerivedType(typeof(SdkControlMcpReconnectRequest), "mcp_reconnect")]
+[JsonDerivedType(typeof(SdkControlMcpToggleRequest), "mcp_toggle")]
+[JsonDerivedType(typeof(SdkControlStopTaskRequest), "stop_task")]
+[JsonDerivedType(typeof(SdkControlMcpStatusRequest), "mcp_status")]
+[JsonDerivedType(typeof(SdkControlGetContextUsageRequest), "get_context_usage")]
 public abstract record SdkControlRequestBase
 {
     /// <summary>
@@ -2200,6 +2756,20 @@ public record SdkControlPermissionRequest : SdkControlRequestBase
     [JsonPropertyName("blocked_path")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? BlockedPath { get; init; }
+
+    /// <summary>
+    /// Gets the unique tool call identifier.
+    /// </summary>
+    [JsonPropertyName("tool_use_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ToolUseId { get; init; }
+
+    /// <summary>
+    /// Gets the sub-agent ID if applicable.
+    /// </summary>
+    [JsonPropertyName("agent_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? AgentId { get; init; }
 }
 
 /// <summary>
@@ -2219,6 +2789,13 @@ public record SdkControlInitializeRequest : SdkControlRequestBase
     [JsonPropertyName("hooks")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Dictionary<HookEvent, object>? Hooks { get; init; }
+
+    /// <summary>
+    /// Gets the agent definitions.
+    /// </summary>
+    [JsonPropertyName("agents")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string, object?>? Agents { get; init; }
 }
 
 /// <summary>
@@ -2386,6 +2963,90 @@ public record ControlErrorResponse
 }
 
 /// <summary>
+/// MCP reconnect request.
+/// </summary>
+public record SdkControlMcpReconnectRequest : SdkControlRequestBase
+{
+    /// <summary>
+    /// Gets the subtype of the control request.
+    /// </summary>
+    [JsonPropertyName("subtype")]
+    public override string Subtype => "mcp_reconnect";
+
+    /// <summary>
+    /// Gets the name of the MCP server to reconnect.
+    /// </summary>
+    [JsonPropertyName("serverName")]
+    public required string ServerName { get; init; }
+}
+
+/// <summary>
+/// MCP toggle request.
+/// </summary>
+public record SdkControlMcpToggleRequest : SdkControlRequestBase
+{
+    /// <summary>
+    /// Gets the subtype of the control request.
+    /// </summary>
+    [JsonPropertyName("subtype")]
+    public override string Subtype => "mcp_toggle";
+
+    /// <summary>
+    /// Gets the name of the MCP server to toggle.
+    /// </summary>
+    [JsonPropertyName("serverName")]
+    public required string ServerName { get; init; }
+
+    /// <summary>
+    /// Gets whether to enable or disable the server.
+    /// </summary>
+    [JsonPropertyName("enabled")]
+    public required bool Enabled { get; init; }
+}
+
+/// <summary>
+/// Stop task request.
+/// </summary>
+public record SdkControlStopTaskRequest : SdkControlRequestBase
+{
+    /// <summary>
+    /// Gets the subtype of the control request.
+    /// </summary>
+    [JsonPropertyName("subtype")]
+    public override string Subtype => "stop_task";
+
+    /// <summary>
+    /// Gets the task ID to stop.
+    /// </summary>
+    [JsonPropertyName("task_id")]
+    public required string TaskId { get; init; }
+}
+
+/// <summary>
+/// MCP status request.
+/// </summary>
+public record SdkControlMcpStatusRequest : SdkControlRequestBase
+{
+    /// <summary>
+    /// Gets the subtype of the control request.
+    /// </summary>
+    [JsonPropertyName("subtype")]
+    public override string Subtype => "mcp_status";
+}
+
+/// <summary>
+/// Get context usage request.
+/// </summary>
+public record SdkControlGetContextUsageRequest : SdkControlRequestBase
+{
+    /// <summary>
+    /// Gets the subtype of the control request.
+    /// </summary>
+    [JsonPropertyName("subtype")]
+    public override string Subtype => "get_context_usage";
+}
+
+/// <summary>
 /// SDK control response wrapper.
 /// </summary>
 public record SdkControlResponse
@@ -2401,6 +3062,863 @@ public record SdkControlResponse
     /// </summary>
     [JsonPropertyName("response")]
     public required object Response { get; init; }
+}
+
+#endregion
+
+#region ThinkingConfig Types
+
+/// <summary>
+/// Base class for thinking configurations.
+/// </summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(ThinkingConfigAdaptive), "adaptive")]
+[JsonDerivedType(typeof(ThinkingConfigEnabled), "enabled")]
+[JsonDerivedType(typeof(ThinkingConfigDisabled), "disabled")]
+public abstract record ThinkingConfig;
+
+/// <summary>
+/// Adaptive thinking configuration.
+/// </summary>
+public record ThinkingConfigAdaptive : ThinkingConfig;
+
+/// <summary>
+/// Enabled thinking configuration with budget.
+/// </summary>
+public record ThinkingConfigEnabled : ThinkingConfig
+{
+    /// <summary>
+    /// Gets the budget tokens for thinking.
+    /// </summary>
+    [JsonPropertyName("budget_tokens")]
+    public required int BudgetTokens { get; init; }
+}
+
+/// <summary>
+/// Disabled thinking configuration.
+/// </summary>
+public record ThinkingConfigDisabled : ThinkingConfig;
+
+#endregion
+
+#region TaskBudget Types
+
+/// <summary>
+/// API-side task budget configuration in tokens.
+/// </summary>
+public record TaskBudget
+{
+    /// <summary>
+    /// Gets the total token budget.
+    /// </summary>
+    [JsonPropertyName("total")]
+    public required int Total { get; init; }
+}
+
+#endregion
+
+#region MCP Status Types
+
+/// <summary>
+/// MCP server connection status values.
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<McpServerConnectionStatus>))]
+public enum McpServerConnectionStatus
+{
+    /// <summary>
+    /// Server is connected.
+    /// </summary>
+    [JsonStringEnumMemberName("connected")]
+    Connected,
+
+    /// <summary>
+    /// Server connection failed.
+    /// </summary>
+    [JsonStringEnumMemberName("failed")]
+    Failed,
+
+    /// <summary>
+    /// Server needs authentication.
+    /// </summary>
+    [JsonStringEnumMemberName("needs-auth")]
+    NeedsAuth,
+
+    /// <summary>
+    /// Server connection is pending.
+    /// </summary>
+    [JsonStringEnumMemberName("pending")]
+    Pending,
+
+    /// <summary>
+    /// Server is disabled.
+    /// </summary>
+    [JsonStringEnumMemberName("disabled")]
+    Disabled
+}
+
+/// <summary>
+/// Tool annotations as returned in MCP server status.
+/// </summary>
+public record McpToolAnnotations
+{
+    /// <summary>
+    /// Gets whether the tool is read-only.
+    /// </summary>
+    [JsonPropertyName("readOnly")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? ReadOnly { get; init; }
+
+    /// <summary>
+    /// Gets whether the tool is destructive.
+    /// </summary>
+    [JsonPropertyName("destructive")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? Destructive { get; init; }
+
+    /// <summary>
+    /// Gets whether the tool accesses open-world resources.
+    /// </summary>
+    [JsonPropertyName("openWorld")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? OpenWorld { get; init; }
+}
+
+/// <summary>
+/// Information about a tool provided by an MCP server.
+/// </summary>
+public record McpToolInfo
+{
+    /// <summary>
+    /// Gets the tool name.
+    /// </summary>
+    [JsonPropertyName("name")]
+    public required string Name { get; init; }
+
+    /// <summary>
+    /// Gets the tool description.
+    /// </summary>
+    [JsonPropertyName("description")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Description { get; init; }
+
+    /// <summary>
+    /// Gets the tool annotations.
+    /// </summary>
+    [JsonPropertyName("annotations")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public McpToolAnnotations? Annotations { get; init; }
+}
+
+/// <summary>
+/// Server info from MCP initialize handshake.
+/// </summary>
+public record McpServerInfo
+{
+    /// <summary>
+    /// Gets the server name.
+    /// </summary>
+    [JsonPropertyName("name")]
+    public required string Name { get; init; }
+
+    /// <summary>
+    /// Gets the server version.
+    /// </summary>
+    [JsonPropertyName("version")]
+    public required string Version { get; init; }
+}
+
+/// <summary>
+/// SDK MCP server config as returned in status responses.
+/// </summary>
+public record McpSdkServerConfigStatus
+{
+    /// <summary>
+    /// Gets the type.
+    /// </summary>
+    [JsonPropertyName("type")]
+    public string Type { get; init; } = "sdk";
+
+    /// <summary>
+    /// Gets the server name.
+    /// </summary>
+    [JsonPropertyName("name")]
+    public required string Name { get; init; }
+}
+
+/// <summary>
+/// Claude.ai proxy MCP server config for status responses.
+/// </summary>
+public record McpClaudeAIProxyServerConfig
+{
+    /// <summary>
+    /// Gets the type.
+    /// </summary>
+    [JsonPropertyName("type")]
+    public string Type { get; init; } = "claudeai-proxy";
+
+    /// <summary>
+    /// Gets the URL.
+    /// </summary>
+    [JsonPropertyName("url")]
+    public required string Url { get; init; }
+
+    /// <summary>
+    /// Gets the ID.
+    /// </summary>
+    [JsonPropertyName("id")]
+    public required string Id { get; init; }
+}
+
+/// <summary>
+/// Status information for an MCP server connection.
+/// </summary>
+public record McpServerStatus
+{
+    /// <summary>
+    /// Gets the server name.
+    /// </summary>
+    [JsonPropertyName("name")]
+    public required string Name { get; init; }
+
+    /// <summary>
+    /// Gets the connection status.
+    /// </summary>
+    [JsonPropertyName("status")]
+    public required McpServerConnectionStatus Status { get; init; }
+
+    /// <summary>
+    /// Gets the server info from MCP initialize handshake.
+    /// </summary>
+    [JsonPropertyName("serverInfo")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public McpServerInfo? ServerInfo { get; init; }
+
+    /// <summary>
+    /// Gets the error message if connection failed.
+    /// </summary>
+    [JsonPropertyName("error")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Error { get; init; }
+
+    /// <summary>
+    /// Gets the server configuration.
+    /// </summary>
+    [JsonPropertyName("config")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public object? Config { get; init; }
+
+    /// <summary>
+    /// Gets the scope of the server.
+    /// </summary>
+    [JsonPropertyName("scope")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Scope { get; init; }
+
+    /// <summary>
+    /// Gets the list of tools provided by the server.
+    /// </summary>
+    [JsonPropertyName("tools")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<McpToolInfo>? Tools { get; init; }
+}
+
+/// <summary>
+/// Response from MCP status query.
+/// </summary>
+public record McpStatusResponse
+{
+    /// <summary>
+    /// Gets the list of MCP server statuses.
+    /// </summary>
+    [JsonPropertyName("mcpServers")]
+    public required List<McpServerStatus> McpServers { get; init; }
+}
+
+#endregion
+
+#region Context Usage Types
+
+/// <summary>
+/// A single context usage category.
+/// </summary>
+public record ContextUsageCategory
+{
+    /// <summary>
+    /// Gets the category name.
+    /// </summary>
+    [JsonPropertyName("name")]
+    public required string Name { get; init; }
+
+    /// <summary>
+    /// Gets the token count for this category.
+    /// </summary>
+    [JsonPropertyName("tokens")]
+    public required int Tokens { get; init; }
+
+    /// <summary>
+    /// Gets the display color.
+    /// </summary>
+    [JsonPropertyName("color")]
+    public required string Color { get; init; }
+
+    /// <summary>
+    /// Gets whether this category is deferred.
+    /// </summary>
+    [JsonPropertyName("isDeferred")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? IsDeferred { get; init; }
+}
+
+/// <summary>
+/// Response from context usage query.
+/// </summary>
+public record ContextUsageResponse
+{
+    /// <summary>
+    /// Gets the usage categories.
+    /// </summary>
+    [JsonPropertyName("categories")]
+    public required List<ContextUsageCategory> Categories { get; init; }
+
+    /// <summary>
+    /// Gets the total token count.
+    /// </summary>
+    [JsonPropertyName("totalTokens")]
+    public required int TotalTokens { get; init; }
+
+    /// <summary>
+    /// Gets the maximum token limit.
+    /// </summary>
+    [JsonPropertyName("maxTokens")]
+    public required int MaxTokens { get; init; }
+
+    /// <summary>
+    /// Gets the raw maximum token limit.
+    /// </summary>
+    [JsonPropertyName("rawMaxTokens")]
+    public required int RawMaxTokens { get; init; }
+
+    /// <summary>
+    /// Gets the usage percentage.
+    /// </summary>
+    [JsonPropertyName("percentage")]
+    public required double Percentage { get; init; }
+
+    /// <summary>
+    /// Gets the model name.
+    /// </summary>
+    [JsonPropertyName("model")]
+    public required string Model { get; init; }
+
+    /// <summary>
+    /// Gets whether auto-compact is enabled.
+    /// </summary>
+    [JsonPropertyName("isAutoCompactEnabled")]
+    public required bool IsAutoCompactEnabled { get; init; }
+
+    /// <summary>
+    /// Gets memory files information.
+    /// </summary>
+    [JsonPropertyName("memoryFiles")]
+    public required List<Dictionary<string, object?>> MemoryFiles { get; init; }
+
+    /// <summary>
+    /// Gets MCP tools information.
+    /// </summary>
+    [JsonPropertyName("mcpTools")]
+    public required List<Dictionary<string, object?>> McpTools { get; init; }
+
+    /// <summary>
+    /// Gets agents information.
+    /// </summary>
+    [JsonPropertyName("agents")]
+    public required List<Dictionary<string, object?>> Agents { get; init; }
+
+    /// <summary>
+    /// Gets the grid rows for display.
+    /// </summary>
+    [JsonPropertyName("gridRows")]
+    public required List<List<Dictionary<string, object?>>> GridRows { get; init; }
+}
+
+#endregion
+
+#region Task Message Types
+
+/// <summary>
+/// Task usage statistics.
+/// </summary>
+public record TaskUsage
+{
+    /// <summary>
+    /// Gets the total token count.
+    /// </summary>
+    [JsonPropertyName("total_tokens")]
+    public required int TotalTokens { get; init; }
+
+    /// <summary>
+    /// Gets the number of tool uses.
+    /// </summary>
+    [JsonPropertyName("tool_uses")]
+    public required int ToolUses { get; init; }
+
+    /// <summary>
+    /// Gets the duration in milliseconds.
+    /// </summary>
+    [JsonPropertyName("duration_ms")]
+    public required int DurationMs { get; init; }
+}
+
+/// <summary>
+/// Task notification status values.
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<TaskNotificationStatus>))]
+public enum TaskNotificationStatus
+{
+    /// <summary>
+    /// Task completed successfully.
+    /// </summary>
+    [JsonStringEnumMemberName("completed")]
+    Completed,
+
+    /// <summary>
+    /// Task failed.
+    /// </summary>
+    [JsonStringEnumMemberName("failed")]
+    Failed,
+
+    /// <summary>
+    /// Task was stopped.
+    /// </summary>
+    [JsonStringEnumMemberName("stopped")]
+    Stopped
+}
+
+/// <summary>
+/// System message emitted when a task starts.
+/// </summary>
+public record TaskStartedMessage : Message
+{
+    /// <summary>
+    /// Gets the task ID.
+    /// </summary>
+    [JsonPropertyName("task_id")]
+    public required string TaskId { get; init; }
+
+    /// <summary>
+    /// Gets the task description.
+    /// </summary>
+    [JsonPropertyName("description")]
+    public required string Description { get; init; }
+
+    /// <summary>
+    /// Gets the unique UUID.
+    /// </summary>
+    [JsonPropertyName("uuid")]
+    public required string Uuid { get; init; }
+
+    /// <summary>
+    /// Gets the session ID.
+    /// </summary>
+    [JsonPropertyName("session_id")]
+    public required string SessionId { get; init; }
+
+    /// <summary>
+    /// Gets the tool use ID if applicable.
+    /// </summary>
+    [JsonPropertyName("tool_use_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ToolUseId { get; init; }
+
+    /// <summary>
+    /// Gets the task type.
+    /// </summary>
+    [JsonPropertyName("task_type")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? TaskType { get; init; }
+}
+
+/// <summary>
+/// System message emitted while a task is in progress.
+/// </summary>
+public record TaskProgressMessage : Message
+{
+    /// <summary>
+    /// Gets the task ID.
+    /// </summary>
+    [JsonPropertyName("task_id")]
+    public required string TaskId { get; init; }
+
+    /// <summary>
+    /// Gets the task description.
+    /// </summary>
+    [JsonPropertyName("description")]
+    public required string Description { get; init; }
+
+    /// <summary>
+    /// Gets the usage statistics.
+    /// </summary>
+    [JsonPropertyName("usage")]
+    public required TaskUsage Usage { get; init; }
+
+    /// <summary>
+    /// Gets the unique UUID.
+    /// </summary>
+    [JsonPropertyName("uuid")]
+    public required string Uuid { get; init; }
+
+    /// <summary>
+    /// Gets the session ID.
+    /// </summary>
+    [JsonPropertyName("session_id")]
+    public required string SessionId { get; init; }
+
+    /// <summary>
+    /// Gets the tool use ID if applicable.
+    /// </summary>
+    [JsonPropertyName("tool_use_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ToolUseId { get; init; }
+
+    /// <summary>
+    /// Gets the last tool name used.
+    /// </summary>
+    [JsonPropertyName("last_tool_name")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LastToolName { get; init; }
+}
+
+/// <summary>
+/// System message emitted when a task completes, fails, or is stopped.
+/// </summary>
+public record TaskNotificationMessage : Message
+{
+    /// <summary>
+    /// Gets the task ID.
+    /// </summary>
+    [JsonPropertyName("task_id")]
+    public required string TaskId { get; init; }
+
+    /// <summary>
+    /// Gets the task status.
+    /// </summary>
+    [JsonPropertyName("status")]
+    public required TaskNotificationStatus Status { get; init; }
+
+    /// <summary>
+    /// Gets the output file path.
+    /// </summary>
+    [JsonPropertyName("output_file")]
+    public required string OutputFile { get; init; }
+
+    /// <summary>
+    /// Gets the task summary.
+    /// </summary>
+    [JsonPropertyName("summary")]
+    public required string Summary { get; init; }
+
+    /// <summary>
+    /// Gets the unique UUID.
+    /// </summary>
+    [JsonPropertyName("uuid")]
+    public required string Uuid { get; init; }
+
+    /// <summary>
+    /// Gets the session ID.
+    /// </summary>
+    [JsonPropertyName("session_id")]
+    public required string SessionId { get; init; }
+
+    /// <summary>
+    /// Gets the tool use ID if applicable.
+    /// </summary>
+    [JsonPropertyName("tool_use_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ToolUseId { get; init; }
+
+    /// <summary>
+    /// Gets the usage statistics.
+    /// </summary>
+    [JsonPropertyName("usage")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public TaskUsage? Usage { get; init; }
+}
+
+#endregion
+
+#region Rate Limit Types
+
+/// <summary>
+/// Rate limit status values.
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<RateLimitStatus>))]
+public enum RateLimitStatus
+{
+    /// <summary>
+    /// Request is allowed.
+    /// </summary>
+    [JsonStringEnumMemberName("allowed")]
+    Allowed,
+
+    /// <summary>
+    /// Request is allowed but approaching the limit.
+    /// </summary>
+    [JsonStringEnumMemberName("allowed_warning")]
+    AllowedWarning,
+
+    /// <summary>
+    /// Request was rejected due to rate limiting.
+    /// </summary>
+    [JsonStringEnumMemberName("rejected")]
+    Rejected
+}
+
+/// <summary>
+/// Rate limit window types.
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<RateLimitType>))]
+public enum RateLimitType
+{
+    /// <summary>
+    /// Five hour rate limit window.
+    /// </summary>
+    [JsonStringEnumMemberName("five_hour")]
+    FiveHour,
+
+    /// <summary>
+    /// Seven day rate limit window.
+    /// </summary>
+    [JsonStringEnumMemberName("seven_day")]
+    SevenDay,
+
+    /// <summary>
+    /// Seven day Opus rate limit window.
+    /// </summary>
+    [JsonStringEnumMemberName("seven_day_opus")]
+    SevenDayOpus,
+
+    /// <summary>
+    /// Seven day Sonnet rate limit window.
+    /// </summary>
+    [JsonStringEnumMemberName("seven_day_sonnet")]
+    SevenDaySonnet,
+
+    /// <summary>
+    /// Overage rate limit.
+    /// </summary>
+    [JsonStringEnumMemberName("overage")]
+    Overage
+}
+
+/// <summary>
+/// Rate limit status information.
+/// </summary>
+public record RateLimitInfo
+{
+    /// <summary>
+    /// Gets the rate limit status.
+    /// </summary>
+    [JsonPropertyName("status")]
+    public required RateLimitStatus Status { get; init; }
+
+    /// <summary>
+    /// Gets the timestamp when the rate limit resets.
+    /// </summary>
+    [JsonPropertyName("resets_at")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public long? ResetsAt { get; init; }
+
+    /// <summary>
+    /// Gets the rate limit type.
+    /// </summary>
+    [JsonPropertyName("rate_limit_type")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public RateLimitType? RateLimitTypeValue { get; init; }
+
+    /// <summary>
+    /// Gets the utilization percentage.
+    /// </summary>
+    [JsonPropertyName("utilization")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? Utilization { get; init; }
+
+    /// <summary>
+    /// Gets the overage status.
+    /// </summary>
+    [JsonPropertyName("overage_status")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public RateLimitStatus? OverageStatus { get; init; }
+
+    /// <summary>
+    /// Gets the timestamp when overage resets.
+    /// </summary>
+    [JsonPropertyName("overage_resets_at")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public long? OverageResetsAt { get; init; }
+
+    /// <summary>
+    /// Gets the reason overage is disabled.
+    /// </summary>
+    [JsonPropertyName("overage_disabled_reason")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? OverageDisabledReason { get; init; }
+
+    /// <summary>
+    /// Gets the raw data.
+    /// </summary>
+    [JsonPropertyName("raw")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string, object?>? Raw { get; init; }
+}
+
+/// <summary>
+/// Rate limit event emitted when rate limit info changes.
+/// </summary>
+public record RateLimitEvent : Message
+{
+    /// <summary>
+    /// Gets the rate limit information.
+    /// </summary>
+    [JsonPropertyName("rate_limit_info")]
+    public required RateLimitInfo RateLimitInfo { get; init; }
+
+    /// <summary>
+    /// Gets the unique UUID.
+    /// </summary>
+    [JsonPropertyName("uuid")]
+    public required string Uuid { get; init; }
+
+    /// <summary>
+    /// Gets the session ID.
+    /// </summary>
+    [JsonPropertyName("session_id")]
+    public required string SessionId { get; init; }
+}
+
+#endregion
+
+#region Session Types
+
+/// <summary>
+/// Session metadata returned by list_sessions.
+/// </summary>
+public record SDKSessionInfo
+{
+    /// <summary>
+    /// Gets the session ID (UUID).
+    /// </summary>
+    [JsonPropertyName("session_id")]
+    public required string SessionId { get; init; }
+
+    /// <summary>
+    /// Gets the session summary.
+    /// </summary>
+    [JsonPropertyName("summary")]
+    public required string Summary { get; init; }
+
+    /// <summary>
+    /// Gets the last modified timestamp (epoch ms).
+    /// </summary>
+    [JsonPropertyName("last_modified")]
+    public required long LastModified { get; init; }
+
+    /// <summary>
+    /// Gets the file size in bytes.
+    /// </summary>
+    [JsonPropertyName("file_size")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public long? FileSize { get; init; }
+
+    /// <summary>
+    /// Gets the custom title set by user.
+    /// </summary>
+    [JsonPropertyName("custom_title")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? CustomTitle { get; init; }
+
+    /// <summary>
+    /// Gets the first meaningful user prompt.
+    /// </summary>
+    [JsonPropertyName("first_prompt")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? FirstPrompt { get; init; }
+
+    /// <summary>
+    /// Gets the git branch name.
+    /// </summary>
+    [JsonPropertyName("git_branch")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? GitBranch { get; init; }
+
+    /// <summary>
+    /// Gets the working directory.
+    /// </summary>
+    [JsonPropertyName("cwd")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Cwd { get; init; }
+
+    /// <summary>
+    /// Gets the session tag.
+    /// </summary>
+    [JsonPropertyName("tag")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Tag { get; init; }
+
+    /// <summary>
+    /// Gets the creation timestamp (epoch ms).
+    /// </summary>
+    [JsonPropertyName("created_at")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public long? CreatedAt { get; init; }
+}
+
+/// <summary>
+/// A user or assistant message from a session transcript.
+/// </summary>
+public record SessionMessage
+{
+    /// <summary>
+    /// Gets the message type ("user" or "assistant").
+    /// </summary>
+    [JsonPropertyName("type")]
+    public required string Type { get; init; }
+
+    /// <summary>
+    /// Gets the message UUID.
+    /// </summary>
+    [JsonPropertyName("uuid")]
+    public required string Uuid { get; init; }
+
+    /// <summary>
+    /// Gets the session ID.
+    /// </summary>
+    [JsonPropertyName("session_id")]
+    public required string SessionId { get; init; }
+
+    /// <summary>
+    /// Gets the full message object from JSONL.
+    /// </summary>
+    [JsonPropertyName("message")]
+    public required object Message { get; init; }
+
+    /// <summary>
+    /// Gets the parent tool use ID.
+    /// </summary>
+    [JsonPropertyName("parent_tool_use_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ParentToolUseId { get; init; }
+}
+
+/// <summary>
+/// Result of a fork operation.
+/// </summary>
+public record ForkSessionResult
+{
+    /// <summary>
+    /// Gets the UUID of the new forked session.
+    /// </summary>
+    [JsonPropertyName("session_id")]
+    public required string SessionId { get; init; }
 }
 
 #endregion

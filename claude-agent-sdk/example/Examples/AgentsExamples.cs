@@ -25,7 +25,7 @@ public static class AgentsExamples
                              "security vulnerabilities, and adherence to best practices. " +
                              "Provide constructive feedback.",
                     Tools = ["Read", "Grep"],
-                    Model = AgentModel.Sonnet
+                    Model = "sonnet"
                 }
             }
         };
@@ -75,7 +75,7 @@ public static class AgentsExamples
                     Prompt = "You are a technical documentation expert. Write clear, comprehensive " +
                              "documentation with examples. Focus on clarity and completeness.",
                     Tools = ["Read", "Write", "Edit"],
-                    Model = AgentModel.Sonnet
+                    Model = "sonnet"
                 }
             }
         };
@@ -130,7 +130,7 @@ public static class AgentsExamples
                     Description = "Creates and runs tests",
                     Prompt = "You are a testing expert. Write comprehensive tests and ensure code quality.",
                     Tools = ["Read", "Write", "Bash"],
-                    Model = AgentModel.Sonnet
+                    Model = "sonnet"
                 }
             },
             SettingSources = [SettingSource.User, SettingSource.Project]

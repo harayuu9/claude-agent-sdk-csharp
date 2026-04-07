@@ -176,7 +176,7 @@ public sealed class ClaudeSDKClient : IAsyncDisposable
 
         // Start reading messages and initialize
         _query.Start();
-        await _query.InitializeAsync(ct);
+        await _query.InitializeAsync(configuredOptions.Agents, ct);
 
         // Stream initial prompt if provided
         if (prompt != null)
@@ -235,7 +235,11 @@ public sealed class ClaudeSDKClient : IAsyncDisposable
 
         await foreach (var data in _query!.ReceiveMessagesAsync(ct))
         {
-            yield return MessageParser.ParseMessage(DictToJsonElement(data));
+            var message = MessageParser.ParseMessage(DictToJsonElement(data));
+            if (message != null)
+            {
+                yield return message;
+            }
         }
     }
 
@@ -371,6 +375,67 @@ public sealed class ClaudeSDKClient : IAsyncDisposable
     public Dictionary<string, object?>? GetServerInfo()
     {
         return ServerInfo;
+    }
+
+    /// <summary>
+    /// Reconnect a disconnected or failed MCP server.
+    /// </summary>
+    /// <param name="serverName">The name of the MCP server to reconnect.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <exception cref="CLIConnectionException">If not connected.</exception>
+    public Task ReconnectMcpServerAsync(string serverName, CancellationToken ct = default)
+    {
+        ThrowIfNotConnected();
+        return _query!.ReconnectMcpServerAsync(serverName, ct);
+    }
+
+    /// <summary>
+    /// Enable or disable an MCP server.
+    /// </summary>
+    /// <param name="serverName">The name of the MCP server to toggle.</param>
+    /// <param name="enabled">Whether to enable or disable the server.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <exception cref="CLIConnectionException">If not connected.</exception>
+    public Task ToggleMcpServerAsync(string serverName, bool enabled, CancellationToken ct = default)
+    {
+        ThrowIfNotConnected();
+        return _query!.ToggleMcpServerAsync(serverName, enabled, ct);
+    }
+
+    /// <summary>
+    /// Stop a running task.
+    /// </summary>
+    /// <param name="taskId">The ID of the task to stop.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <exception cref="CLIConnectionException">If not connected.</exception>
+    public Task StopTaskAsync(string taskId, CancellationToken ct = default)
+    {
+        ThrowIfNotConnected();
+        return _query!.StopTaskAsync(taskId, ct);
+    }
+
+    /// <summary>
+    /// Get the status of all MCP server connections.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>MCP status response with server connection details.</returns>
+    /// <exception cref="CLIConnectionException">If not connected.</exception>
+    public Task<McpStatusResponse> GetMcpStatusAsync(CancellationToken ct = default)
+    {
+        ThrowIfNotConnected();
+        return _query!.GetMcpStatusAsync(ct);
+    }
+
+    /// <summary>
+    /// Get the current context usage breakdown.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Context usage response with token breakdowns.</returns>
+    /// <exception cref="CLIConnectionException">If not connected.</exception>
+    public Task<ContextUsageResponse> GetContextUsageAsync(CancellationToken ct = default)
+    {
+        ThrowIfNotConnected();
+        return _query!.GetContextUsageAsync(ct);
     }
 
     #endregion

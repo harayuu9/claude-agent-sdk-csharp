@@ -56,6 +56,42 @@ public static class SdkMcpServer
     /// <returns>McpSdkServerConfig ready to use with ClaudeAgentOptions.McpServers.</returns>
     public static McpSdkServerConfig Create(string name, params ISdkMcpToolDefinition[] tools)
         => Create(name, "1.0.0", tools);
+
+    /// <summary>
+    /// Create an MCP server from a type containing methods marked with [Tool] attribute.
+    /// Creates a new instance of the type using the default constructor.
+    /// </summary>
+    /// <typeparam name="T">The type containing tool methods.</typeparam>
+    /// <param name="name">Server name.</param>
+    /// <param name="version">Server version (default: "1.0.0").</param>
+    /// <returns>McpSdkServerConfig ready for use.</returns>
+    /// <example>
+    /// <code>
+    /// public class Calculator
+    /// {
+    ///     [Tool("add", "Add two numbers")]
+    ///     public async Task&lt;SdkMcpToolResult&gt; Add(AddArgs args)
+    ///     {
+    ///         return SdkMcpToolResult.FromText($"Result: {args.A + args.B}");
+    ///     }
+    /// }
+    ///
+    /// var server = SdkMcpServer.FromType&lt;Calculator&gt;("calculator");
+    /// </code>
+    /// </example>
+    public static McpSdkServerConfig FromType<T>(string name, string version = "1.0.0") where T : new()
+        => SdkMcpServerExtensions.FromType<T>(name, version);
+
+    /// <summary>
+    /// Create an MCP server from an instance containing methods marked with [Tool] attribute.
+    /// </summary>
+    /// <typeparam name="T">The type of the instance.</typeparam>
+    /// <param name="instance">The instance containing tool methods.</param>
+    /// <param name="name">Server name.</param>
+    /// <param name="version">Server version (default: "1.0.0").</param>
+    /// <returns>McpSdkServerConfig ready for use.</returns>
+    public static McpSdkServerConfig FromInstance<T>(T instance, string name, string version = "1.0.0")
+        => SdkMcpServerExtensions.FromInstance(instance, name, version);
 }
 
 /// <summary>

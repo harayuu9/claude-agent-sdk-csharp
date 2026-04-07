@@ -354,10 +354,10 @@ public class MessageParserTests
     public void TestParseUnknownMessageType()
     {
         var json = """{"type": "unknown_type"}""";
-        var exception = Assert.Throws<MessageParseException>(() =>
-            MessageParser.ParseMessage(ParseJson(json)));
+        var message = MessageParser.ParseMessage(ParseJson(json));
 
-        Assert.Contains("Unknown message type: unknown_type", exception.Message);
+        // Forward-compatible: unknown message types return null
+        Assert.Null(message);
     }
 
     [Fact]
@@ -403,13 +403,12 @@ public class MessageParserTests
     [Fact]
     public void TestMessageParseExceptionContainsData()
     {
-        var json = """{"type": "unknown", "some": "data"}""";
+        // Use a message with invalid structure (not an object) to trigger MessageParseException
+        var json = """42""";
         var exception = Assert.Throws<MessageParseException>(() =>
             MessageParser.ParseMessage(ParseJson(json)));
 
-        Assert.NotNull(exception.Data);
-        Assert.Equal("unknown", exception.Data["type"]);
-        Assert.Equal("data", exception.Data["some"]);
+        Assert.Contains("Invalid message data type", exception.Message);
     }
 
     #endregion
