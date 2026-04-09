@@ -20,6 +20,7 @@ Claude Agent SDK for C# provides two main APIs for interacting with Claude Code:
 ### Key Features
 
 - Two flexible APIs for different use cases
+- Image input support (base64, URL, local file)
 - MCP (Model Context Protocol) support for custom tools
 - Custom agent definitions with extended configuration
 - Hooks for event handling (PreToolUse, PostToolUse, Notification, etc.)
@@ -131,6 +132,41 @@ await foreach (var message in Query.RunAsync("Create a web server", options))
     // ...
 }
 ```
+
+### Image Input
+
+Send images to Claude alongside text using `ImageBlock`. Supports base64-encoded data, URLs, and local files.
+
+```csharp
+// From a local file (media type auto-detected from extension)
+await client.QueryAsync([
+    new TextBlock { Text = "What is in this image?" },
+    ImageBlock.FromFile("photo.png")
+]);
+
+// From a URL
+await client.QueryAsync([
+    new TextBlock { Text = "Describe this image." },
+    ImageBlock.FromUrl("https://example.com/image.jpg")
+]);
+
+// From base64 data
+await client.QueryAsync([
+    ImageBlock.FromBase64(base64String, "image/png")
+]);
+
+// Async file loading
+var imageBlock = await ImageBlock.FromFileAsync("large-photo.jpg");
+await client.QueryAsync([
+    new TextBlock { Text = "Analyze this photo." },
+    imageBlock
+]);
+```
+
+Supported file extensions for auto-detection: `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`.
+You can also pass an explicit media type: `ImageBlock.FromFile("image.bmp", "image/bmp")`.
+
+> **Note**: This is a C# SDK-unique feature not available in the original Python SDK.
 
 ### System Prompt from File
 

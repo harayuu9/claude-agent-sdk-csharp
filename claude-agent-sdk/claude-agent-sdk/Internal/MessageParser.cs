@@ -700,6 +700,33 @@ public static class MessageParser
                         IsError = isError
                     });
                     break;
+
+                case "image":
+                    if (block.TryGetProperty("source", out var sourceElem))
+                    {
+                        var sourceType = sourceElem.TryGetProperty("type", out var srcTypeElem)
+                            ? srcTypeElem.GetString() : null;
+
+                        ImageSource? imageSource = sourceType switch
+                        {
+                            "base64" => new Base64ImageSource
+                            {
+                                MediaType = sourceElem.GetProperty("media_type").GetString() ?? "",
+                                Data = sourceElem.GetProperty("data").GetString() ?? ""
+                            },
+                            "url" => new UrlImageSource
+                            {
+                                Url = sourceElem.GetProperty("url").GetString() ?? ""
+                            },
+                            _ => null
+                        };
+
+                        if (imageSource != null)
+                        {
+                            blocks.Add(new ImageBlock { Source = imageSource });
+                        }
+                    }
+                    break;
             }
         }
 

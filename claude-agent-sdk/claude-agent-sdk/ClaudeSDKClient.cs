@@ -130,6 +130,7 @@ public sealed class ClaudeSDKClient : IAsyncDisposable
     /// <list type="bullet">
     ///   <item><c>null</c>: Connect without sending a prompt</item>
     ///   <item><c>string</c>: Simple text prompt</item>
+    ///   <item><c>IEnumerable&lt;ContentBlock&gt;</c>: Content blocks (text, images, etc.)</item>
     ///   <item><c>IAsyncEnumerable&lt;Dictionary&lt;string, object?&gt;&gt;</c>: Streaming messages</item>
     /// </list>
     /// </param>
@@ -158,6 +159,7 @@ public sealed class ClaudeSDKClient : IAsyncDisposable
         {
             null => EmptyInputStream(),
             string => EmptyInputStream(),
+            IEnumerable<ContentBlock> => EmptyInputStream(),
             _ => prompt
         };
         _transport = _customTransport ?? new SubprocessCliTransport(effectivePrompt, configuredOptions);
@@ -285,6 +287,38 @@ public sealed class ClaudeSDKClient : IAsyncDisposable
             {
                 ["role"] = "user",
                 ["content"] = prompt
+            }
+        };
+
+        if (sessionId != null)
+        {
+            message["session_id"] = sessionId;
+        }
+
+        var json = JsonSerializer.Serialize(message) + "\n";
+        await _transport!.WriteAsync(json, ct);
+    }
+
+    /// <summary>
+    /// Send a new prompt/query with content blocks (supports text and images).
+    /// </summary>
+    /// <param name="contentBlocks">The content blocks to send (e.g., TextBlock, ImageBlock).</param>
+    /// <param name="sessionId">Optional session ID for multi-session support.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <exception cref="CLIConnectionException">If not connected.</exception>
+    public async Task QueryAsync(IEnumerable<ContentBlock> contentBlocks, string? sessionId = null, CancellationToken ct = default)
+    {
+        ThrowIfNotConnected();
+
+        var contentArray = contentBlocks.Select(SerializeContentBlock).ToList();
+
+        var message = new Dictionary<string, object?>
+        {
+            ["type"] = "user",
+            ["message"] = new Dictionary<string, object?>
+            {
+                ["role"] = "user",
+                ["content"] = contentArray
             }
         };
 
@@ -525,6 +559,18 @@ public sealed class ClaudeSDKClient : IAsyncDisposable
                 };
                 break;
 
+            case IEnumerable<ContentBlock> contentBlocks:
+                yield return new Dictionary<string, object?>
+                {
+                    ["type"] = "user",
+                    ["message"] = new Dictionary<string, object?>
+                    {
+                        ["role"] = "user",
+                        ["content"] = contentBlocks.Select(SerializeContentBlock).ToList()
+                    }
+                };
+                break;
+
             case IAsyncEnumerable<Dictionary<string, object?>> stream:
                 await foreach (var msg in stream)
                 {
@@ -539,9 +585,45 @@ public sealed class ClaudeSDKClient : IAsyncDisposable
             default:
                 throw new ArgumentException(
                     $"Unsupported prompt type: {prompt.GetType()}. " +
-                    "Expected string, IAsyncEnumerable<Dictionary<string, object?>>, or Dictionary<string, object?>.",
+                    "Expected string, IEnumerable<ContentBlock>, IAsyncEnumerable<Dictionary<string, object?>>, or Dictionary<string, object?>.",
                     nameof(prompt));
         }
+    }
+
+    private static Dictionary<string, object?> SerializeContentBlock(ContentBlock block)
+    {
+        return block switch
+        {
+            TextBlock text => new Dictionary<string, object?>
+            {
+                ["type"] = "text",
+                ["text"] = text.Text
+            },
+            ImageBlock image => image.Source switch
+            {
+                Base64ImageSource base64 => new Dictionary<string, object?>
+                {
+                    ["type"] = "image",
+                    ["source"] = new Dictionary<string, object?>
+                    {
+                        ["type"] = "base64",
+                        ["media_type"] = base64.MediaType,
+                        ["data"] = base64.Data
+                    }
+                },
+                UrlImageSource url => new Dictionary<string, object?>
+                {
+                    ["type"] = "image",
+                    ["source"] = new Dictionary<string, object?>
+                    {
+                        ["type"] = "url",
+                        ["url"] = url.Url
+                    }
+                },
+                _ => throw new ArgumentException($"Unsupported image source type: {image.Source.GetType()}")
+            },
+            _ => throw new ArgumentException($"Unsupported content block type for serialization: {block.GetType()}")
+        };
     }
 
     private static JsonElement DictToJsonElement(Dictionary<string, object?> data)

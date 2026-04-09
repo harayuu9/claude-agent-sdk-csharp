@@ -1824,6 +1824,7 @@ public record SandboxSettings
 [JsonDerivedType(typeof(ThinkingBlock), "thinking")]
 [JsonDerivedType(typeof(ToolUseBlock), "tool_use")]
 [JsonDerivedType(typeof(ToolResultBlock), "tool_result")]
+[JsonDerivedType(typeof(ImageBlock), "image")]
 public abstract record ContentBlock;
 
 /// <summary>
@@ -1904,6 +1905,130 @@ public record ToolResultBlock : ContentBlock
     [JsonPropertyName("is_error")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? IsError { get; init; }
+}
+
+/// <summary>
+/// Image source for an image content block.
+/// </summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(Base64ImageSource), "base64")]
+[JsonDerivedType(typeof(UrlImageSource), "url")]
+public abstract record ImageSource;
+
+/// <summary>
+/// Base64-encoded image source.
+/// </summary>
+public record Base64ImageSource : ImageSource
+{
+    /// <summary>
+    /// Gets the media type of the image (e.g., "image/png", "image/jpeg", "image/gif", "image/webp").
+    /// </summary>
+    [JsonPropertyName("media_type")]
+    public required string MediaType { get; init; }
+
+    /// <summary>
+    /// Gets the base64-encoded image data.
+    /// </summary>
+    [JsonPropertyName("data")]
+    public required string Data { get; init; }
+}
+
+/// <summary>
+/// URL image source.
+/// </summary>
+public record UrlImageSource : ImageSource
+{
+    /// <summary>
+    /// Gets the URL of the image.
+    /// </summary>
+    [JsonPropertyName("url")]
+    public required string Url { get; init; }
+}
+
+/// <summary>
+/// Image content block.
+/// </summary>
+public record ImageBlock : ContentBlock
+{
+    /// <summary>
+    /// Gets the image source.
+    /// </summary>
+    [JsonPropertyName("source")]
+    public required ImageSource Source { get; init; }
+
+    /// <summary>
+    /// Creates an ImageBlock from base64-encoded data.
+    /// </summary>
+    /// <param name="data">Base64-encoded image data.</param>
+    /// <param name="mediaType">Media type (e.g., "image/png", "image/jpeg", "image/gif", "image/webp").</param>
+    public static ImageBlock FromBase64(string data, string mediaType) => new()
+    {
+        Source = new Base64ImageSource { Data = data, MediaType = mediaType }
+    };
+
+    /// <summary>
+    /// Creates an ImageBlock from a URL.
+    /// </summary>
+    /// <param name="url">The image URL.</param>
+    public static ImageBlock FromUrl(string url) => new()
+    {
+        Source = new UrlImageSource { Url = url }
+    };
+
+    /// <summary>
+    /// Creates an ImageBlock from a file path by reading and base64-encoding the file.
+    /// </summary>
+    /// <param name="filePath">Path to the image file.</param>
+    /// <param name="mediaType">Optional media type. If null, inferred from file extension.</param>
+    /// <exception cref="FileNotFoundException">If the file does not exist.</exception>
+    /// <exception cref="ArgumentException">If the media type cannot be inferred from the file extension.</exception>
+    public static ImageBlock FromFile(string filePath, string? mediaType = null)
+    {
+        if (!File.Exists(filePath))
+        {
+            throw new FileNotFoundException("Image file not found.", filePath);
+        }
+
+        mediaType ??= InferMediaType(filePath);
+        var data = Convert.ToBase64String(File.ReadAllBytes(filePath));
+        return FromBase64(data, mediaType);
+    }
+
+    /// <summary>
+    /// Creates an ImageBlock from a file path by reading and base64-encoding the file asynchronously.
+    /// </summary>
+    /// <param name="filePath">Path to the image file.</param>
+    /// <param name="mediaType">Optional media type. If null, inferred from file extension.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <exception cref="FileNotFoundException">If the file does not exist.</exception>
+    /// <exception cref="ArgumentException">If the media type cannot be inferred from the file extension.</exception>
+    public static async Task<ImageBlock> FromFileAsync(string filePath, string? mediaType = null, CancellationToken ct = default)
+    {
+        if (!File.Exists(filePath))
+        {
+            throw new FileNotFoundException("Image file not found.", filePath);
+        }
+
+        mediaType ??= InferMediaType(filePath);
+        var bytes = await File.ReadAllBytesAsync(filePath, ct);
+        var data = Convert.ToBase64String(bytes);
+        return FromBase64(data, mediaType);
+    }
+
+    private static string InferMediaType(string filePath)
+    {
+        var ext = Path.GetExtension(filePath).ToLowerInvariant();
+        return ext switch
+        {
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".gif" => "image/gif",
+            ".webp" => "image/webp",
+            _ => throw new ArgumentException(
+                $"Cannot infer media type from extension '{ext}'. Supported: .png, .jpg, .jpeg, .gif, .webp. Specify mediaType explicitly.",
+                nameof(filePath))
+        };
+    }
 }
 
 #endregion

@@ -20,6 +20,7 @@ Claude Agent SDK for C# は、Claude Codeと対話するための2つの主要�
 ### 主な機能
 
 - 用途に応じた2つの柔軟なAPI
+- 画像入力サポート（base64、URL、ローカルファイル）
 - MCP (Model Context Protocol) によるカスタムツールのサポート
 - 拡張構成を備えたカスタムエージェント定義
 - イベント処理用のHooks（PreToolUse、PostToolUse、Notification等）
@@ -131,6 +132,41 @@ await foreach (var message in Query.RunAsync("Webサーバーを作成して", o
     // ...
 }
 ```
+
+### 画像入力
+
+`ImageBlock`を使用して、テキストと一緒に画像をClaudeに送信できます。base64エンコードデータ、URL、ローカルファイルに対応しています。
+
+```csharp
+// ローカルファイルから（拡張子からメディアタイプを自動検出）
+await client.QueryAsync([
+    new TextBlock { Text = "この画像には何が写っていますか？" },
+    ImageBlock.FromFile("photo.png")
+]);
+
+// URLから
+await client.QueryAsync([
+    new TextBlock { Text = "この画像を説明してください。" },
+    ImageBlock.FromUrl("https://example.com/image.jpg")
+]);
+
+// base64データから
+await client.QueryAsync([
+    ImageBlock.FromBase64(base64String, "image/png")
+]);
+
+// 非同期ファイル読み込み
+var imageBlock = await ImageBlock.FromFileAsync("large-photo.jpg");
+await client.QueryAsync([
+    new TextBlock { Text = "この写真を分析してください。" },
+    imageBlock
+]);
+```
+
+自動検出に対応するファイル拡張子: `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`
+明示的にメディアタイプを指定することも可能です: `ImageBlock.FromFile("image.bmp", "image/bmp")`
+
+> **注意**: これはC# SDK独自の機能であり、元のPython SDKには含まれていません。
 
 ### ファイルからのシステムプロンプト
 
