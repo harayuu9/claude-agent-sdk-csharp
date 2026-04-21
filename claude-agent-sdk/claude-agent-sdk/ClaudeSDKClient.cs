@@ -622,8 +622,51 @@ public sealed class ClaudeSDKClient : IAsyncDisposable
                 },
                 _ => throw new ArgumentException($"Unsupported image source type: {image.Source.GetType()}")
             },
+            DocumentBlock document => SerializeDocumentBlock(document),
             _ => throw new ArgumentException($"Unsupported content block type for serialization: {block.GetType()}")
         };
+    }
+
+    private static Dictionary<string, object?> SerializeDocumentBlock(DocumentBlock document)
+    {
+        var sourceDict = document.Source switch
+        {
+            Base64DocumentSource base64 => new Dictionary<string, object?>
+            {
+                ["type"] = "base64",
+                ["media_type"] = base64.MediaType,
+                ["data"] = base64.Data
+            },
+            UrlDocumentSource url => new Dictionary<string, object?>
+            {
+                ["type"] = "url",
+                ["url"] = url.Url
+            },
+            PlainTextDocumentSource text => new Dictionary<string, object?>
+            {
+                ["type"] = "text",
+                ["media_type"] = text.MediaType,
+                ["data"] = text.Data
+            },
+            _ => throw new ArgumentException($"Unsupported document source type: {document.Source.GetType()}")
+        };
+
+        var result = new Dictionary<string, object?>
+        {
+            ["type"] = "document",
+            ["source"] = sourceDict
+        };
+
+        if (document.Title != null)
+            result["title"] = document.Title;
+
+        if (document.Context != null)
+            result["context"] = document.Context;
+
+        if (document.Citations != null)
+            result["citations"] = new Dictionary<string, object?> { ["enabled"] = document.Citations.Enabled };
+
+        return result;
     }
 
     private static JsonElement DictToJsonElement(Dictionary<string, object?> data)

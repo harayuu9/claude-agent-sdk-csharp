@@ -1825,6 +1825,7 @@ public record SandboxSettings
 [JsonDerivedType(typeof(ToolUseBlock), "tool_use")]
 [JsonDerivedType(typeof(ToolResultBlock), "tool_result")]
 [JsonDerivedType(typeof(ImageBlock), "image")]
+[JsonDerivedType(typeof(DocumentBlock), "document")]
 public abstract record ContentBlock;
 
 /// <summary>
@@ -2026,6 +2027,194 @@ public record ImageBlock : ContentBlock
             ".webp" => "image/webp",
             _ => throw new ArgumentException(
                 $"Cannot infer media type from extension '{ext}'. Supported: .png, .jpg, .jpeg, .gif, .webp. Specify mediaType explicitly.",
+                nameof(filePath))
+        };
+    }
+}
+
+/// <summary>
+/// Document source for a document content block.
+/// </summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(Base64DocumentSource), "base64")]
+[JsonDerivedType(typeof(UrlDocumentSource), "url")]
+[JsonDerivedType(typeof(PlainTextDocumentSource), "text")]
+public abstract record DocumentSource;
+
+/// <summary>
+/// Base64-encoded document source.
+/// </summary>
+public record Base64DocumentSource : DocumentSource
+{
+    /// <summary>
+    /// Gets the media type of the document (e.g., "application/pdf", "text/plain", "text/csv", "text/html").
+    /// </summary>
+    [JsonPropertyName("media_type")]
+    public required string MediaType { get; init; }
+
+    /// <summary>
+    /// Gets the base64-encoded document data.
+    /// </summary>
+    [JsonPropertyName("data")]
+    public required string Data { get; init; }
+}
+
+/// <summary>
+/// URL document source.
+/// </summary>
+public record UrlDocumentSource : DocumentSource
+{
+    /// <summary>
+    /// Gets the URL of the document.
+    /// </summary>
+    [JsonPropertyName("url")]
+    public required string Url { get; init; }
+}
+
+/// <summary>
+/// Plain text document source.
+/// </summary>
+public record PlainTextDocumentSource : DocumentSource
+{
+    /// <summary>
+    /// Gets the media type of the text content (e.g., "text/plain", "text/csv", "text/html").
+    /// </summary>
+    [JsonPropertyName("media_type")]
+    public required string MediaType { get; init; }
+
+    /// <summary>
+    /// Gets the plain text content.
+    /// </summary>
+    [JsonPropertyName("data")]
+    public required string Data { get; init; }
+}
+
+/// <summary>
+/// Citations configuration for document blocks.
+/// </summary>
+public record CitationsConfig
+{
+    /// <summary>
+    /// Gets whether citations are enabled.
+    /// </summary>
+    [JsonPropertyName("enabled")]
+    public required bool Enabled { get; init; }
+}
+
+/// <summary>
+/// Document content block for attaching files (PDF, plain text, CSV, HTML, DOCX, XLSX).
+/// </summary>
+public record DocumentBlock : ContentBlock
+{
+    /// <summary>
+    /// Gets the document source.
+    /// </summary>
+    [JsonPropertyName("source")]
+    public required DocumentSource Source { get; init; }
+
+    /// <summary>
+    /// Gets the optional title of the document.
+    /// </summary>
+    [JsonPropertyName("title")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Title { get; init; }
+
+    /// <summary>
+    /// Gets the optional context for the document.
+    /// </summary>
+    [JsonPropertyName("context")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Context { get; init; }
+
+    /// <summary>
+    /// Gets the optional citations configuration.
+    /// </summary>
+    [JsonPropertyName("citations")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public CitationsConfig? Citations { get; init; }
+
+    /// <summary>
+    /// Creates a DocumentBlock from base64-encoded data.
+    /// </summary>
+    /// <param name="data">Base64-encoded document data.</param>
+    /// <param name="mediaType">Media type (e.g., "application/pdf").</param>
+    public static DocumentBlock FromBase64(string data, string mediaType) => new()
+    {
+        Source = new Base64DocumentSource { Data = data, MediaType = mediaType }
+    };
+
+    /// <summary>
+    /// Creates a DocumentBlock from a URL.
+    /// </summary>
+    /// <param name="url">The document URL.</param>
+    public static DocumentBlock FromUrl(string url) => new()
+    {
+        Source = new UrlDocumentSource { Url = url }
+    };
+
+    /// <summary>
+    /// Creates a DocumentBlock from plain text content.
+    /// </summary>
+    /// <param name="text">The text content.</param>
+    /// <param name="mediaType">Media type (default: "text/plain").</param>
+    public static DocumentBlock FromText(string text, string mediaType = "text/plain") => new()
+    {
+        Source = new PlainTextDocumentSource { Data = text, MediaType = mediaType }
+    };
+
+    /// <summary>
+    /// Creates a DocumentBlock from a file path by reading and base64-encoding the file.
+    /// </summary>
+    /// <param name="filePath">Path to the document file.</param>
+    /// <param name="mediaType">Optional media type. If null, inferred from file extension.</param>
+    /// <exception cref="FileNotFoundException">If the file does not exist.</exception>
+    /// <exception cref="ArgumentException">If the media type cannot be inferred from the file extension.</exception>
+    public static DocumentBlock FromFile(string filePath, string? mediaType = null)
+    {
+        if (!File.Exists(filePath))
+        {
+            throw new FileNotFoundException("Document file not found.", filePath);
+        }
+
+        mediaType ??= InferDocumentMediaType(filePath);
+        var data = Convert.ToBase64String(File.ReadAllBytes(filePath));
+        return FromBase64(data, mediaType);
+    }
+
+    /// <summary>
+    /// Creates a DocumentBlock from a file path by reading and base64-encoding the file asynchronously.
+    /// </summary>
+    /// <param name="filePath">Path to the document file.</param>
+    /// <param name="mediaType">Optional media type. If null, inferred from file extension.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <exception cref="FileNotFoundException">If the file does not exist.</exception>
+    /// <exception cref="ArgumentException">If the media type cannot be inferred from the file extension.</exception>
+    public static async Task<DocumentBlock> FromFileAsync(string filePath, string? mediaType = null, CancellationToken ct = default)
+    {
+        if (!File.Exists(filePath))
+        {
+            throw new FileNotFoundException("Document file not found.", filePath);
+        }
+
+        mediaType ??= InferDocumentMediaType(filePath);
+        var bytes = await File.ReadAllBytesAsync(filePath, ct);
+        var data = Convert.ToBase64String(bytes);
+        return FromBase64(data, mediaType);
+    }
+
+    private static string InferDocumentMediaType(string filePath)
+    {
+        var ext = Path.GetExtension(filePath).ToLowerInvariant();
+        return ext switch
+        {
+            ".pdf" => "application/pdf",
+            ".txt" => "text/plain",
+            ".csv" => "text/csv",
+            ".html" or ".htm" => "text/html",
+            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            _ => throw new ArgumentException(
+                $"Cannot infer media type from extension '{ext}'. Supported: .pdf, .txt, .csv, .html, .htm, .docx, .xlsx. Specify mediaType explicitly.",
                 nameof(filePath))
         };
     }

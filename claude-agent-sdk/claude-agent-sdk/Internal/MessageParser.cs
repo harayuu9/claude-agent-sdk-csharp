@@ -727,6 +727,50 @@ public static class MessageParser
                         }
                     }
                     break;
+
+                case "document":
+                    if (block.TryGetProperty("source", out var docSourceElem))
+                    {
+                        var docSourceType = docSourceElem.TryGetProperty("type", out var docSrcTypeElem)
+                            ? docSrcTypeElem.GetString() : null;
+
+                        DocumentSource? docSource = docSourceType switch
+                        {
+                            "base64" => new Base64DocumentSource
+                            {
+                                MediaType = docSourceElem.GetProperty("media_type").GetString() ?? "",
+                                Data = docSourceElem.GetProperty("data").GetString() ?? ""
+                            },
+                            "url" => new UrlDocumentSource
+                            {
+                                Url = docSourceElem.GetProperty("url").GetString() ?? ""
+                            },
+                            "text" => new PlainTextDocumentSource
+                            {
+                                MediaType = docSourceElem.GetProperty("media_type").GetString() ?? "",
+                                Data = docSourceElem.GetProperty("data").GetString() ?? ""
+                            },
+                            _ => null
+                        };
+
+                        if (docSource != null)
+                        {
+                            var docBlock = new DocumentBlock { Source = docSource };
+
+                            if (block.TryGetProperty("title", out var titleElem) && titleElem.ValueKind == JsonValueKind.String)
+                                docBlock = docBlock with { Title = titleElem.GetString() };
+
+                            if (block.TryGetProperty("context", out var ctxElem) && ctxElem.ValueKind == JsonValueKind.String)
+                                docBlock = docBlock with { Context = ctxElem.GetString() };
+
+                            if (block.TryGetProperty("citations", out var citElem) && citElem.ValueKind == JsonValueKind.Object
+                                && citElem.TryGetProperty("enabled", out var enabledElem))
+                                docBlock = docBlock with { Citations = new CitationsConfig { Enabled = enabledElem.GetBoolean() } };
+
+                            blocks.Add(docBlock);
+                        }
+                    }
+                    break;
             }
         }
 
