@@ -478,4 +478,385 @@ public static partial class Sessions
     private static partial Regex SanitizePathRegex();
 
     #endregion
+
+    #region Project Key
+
+    /// <summary>
+    /// Derive the SessionStore project_key for a directory.
+    /// Defaults to the current working directory.
+    /// </summary>
+    public static string ProjectKeyForDirectory(string? directory = null)
+    {
+        var absPath = CanonicalizePath(directory ?? Environment.CurrentDirectory);
+        return SanitizePath(absPath);
+    }
+
+    #endregion
+
+    #region Subagent Support
+
+    /// <summary>
+    /// List subagent IDs for a given session.
+    /// </summary>
+    public static List<string> ListSubagents(string sessionId, string? directory = null)
+    {
+        if (!IsValidUuid(sessionId))
+            return [];
+
+        var subagentsDir = ResolveSubagentsDir(sessionId, directory);
+        if (subagentsDir == null || !Directory.Exists(subagentsDir))
+            return [];
+
+        return CollectAgentFiles(subagentsDir).Select(a => a.AgentId).ToList();
+    }
+
+    /// <summary>
+    /// Read a subagent's conversation messages from its JSONL transcript file.
+    /// </summary>
+    public static List<SessionMessage> GetSubagentMessages(
+        string sessionId,
+        string agentId,
+        string? directory = null,
+        int? limit = null,
+        int offset = 0)
+    {
+        if (!IsValidUuid(sessionId) || string.IsNullOrEmpty(agentId))
+            return [];
+
+        var subagentsDir = ResolveSubagentsDir(sessionId, directory);
+        if (subagentsDir == null || !Directory.Exists(subagentsDir))
+            return [];
+
+        string? matchPath = null;
+        foreach (var (id, path) in CollectAgentFiles(subagentsDir))
+        {
+            if (id == agentId)
+            {
+                matchPath = path;
+                break;
+            }
+        }
+
+        if (matchPath == null)
+            return [];
+
+        try
+        {
+            var messages = ParseJsonlToMessages(matchPath);
+            return ApplyPaging(messages, limit, offset);
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    private static string? ResolveSubagentsDir(string sessionId, string? directory)
+    {
+        var sessionFile = FindSessionFile(sessionId, directory);
+        if (sessionFile == null)
+            return null;
+
+        var sessionDir = Path.ChangeExtension(sessionFile, null);
+        return Path.Combine(sessionDir, "subagents");
+    }
+
+    private static List<(string AgentId, string Path)> CollectAgentFiles(string baseDir)
+    {
+        var results = new List<(string, string)>();
+        CollectAgentFilesRecursive(baseDir, results);
+        return results;
+    }
+
+    private static void CollectAgentFilesRecursive(string dir, List<(string, string)> results)
+    {
+        try
+        {
+            foreach (var entry in Directory.EnumerateFileSystemEntries(dir).OrderBy(e => Path.GetFileName(e)))
+            {
+                var name = Path.GetFileName(entry);
+                if (File.Exists(entry) && name.StartsWith("agent-") && name.EndsWith(".jsonl"))
+                {
+                    var agentId = name["agent-".Length..^".jsonl".Length];
+                    results.Add((agentId, entry));
+                }
+                else if (Directory.Exists(entry))
+                {
+                    CollectAgentFilesRecursive(entry, results);
+                }
+            }
+        }
+        catch
+        {
+            // Ignore directory scanning errors
+        }
+    }
+
+    private static List<SessionMessage> ParseJsonlToMessages(string filePath)
+    {
+        var messages = new List<SessionMessage>();
+        foreach (var line in File.ReadLines(filePath))
+        {
+            if (string.IsNullOrWhiteSpace(line))
+                continue;
+            try
+            {
+                using var doc = JsonDocument.Parse(line);
+                var root = doc.RootElement;
+                if (!root.TryGetProperty("type", out var typeElem))
+                    continue;
+                var type = typeElem.GetString();
+                if (type is not ("user" or "assistant"))
+                    continue;
+                if (!root.TryGetProperty("uuid", out var uuidElem))
+                    continue;
+                var uuid = uuidElem.GetString();
+                if (string.IsNullOrEmpty(uuid))
+                    continue;
+                if (root.TryGetProperty("isSidechain", out var sc) && sc.ValueKind == JsonValueKind.True)
+                    continue;
+                var sid = root.TryGetProperty("sessionId", out var sidElem) ? sidElem.GetString() ?? "" : "";
+                var parentToolUseId = root.TryGetProperty("parentToolUseId", out var ptui) && ptui.ValueKind == JsonValueKind.String
+                    ? ptui.GetString() : null;
+                messages.Add(new SessionMessage
+                {
+                    Type = type,
+                    Uuid = uuid,
+                    SessionId = sid,
+                    Message = JsonSerializer.Deserialize<object>(line)!,
+                    ParentToolUseId = parentToolUseId
+                });
+            }
+            catch (JsonException) { }
+        }
+        return messages;
+    }
+
+    private static List<SessionMessage> ApplyPaging(List<SessionMessage> messages, int? limit, int offset)
+    {
+        if (offset > 0)
+            messages = messages.Skip(offset).ToList();
+        if (limit.HasValue && limit.Value > 0)
+            messages = messages.Take(limit.Value).ToList();
+        return messages;
+    }
+
+    #endregion
+
+    #region Store-backed Session Functions
+
+    /// <summary>
+    /// List sessions from an ISessionStore.
+    /// </summary>
+    public static async Task<List<SDKSessionInfo>> ListSessionsFromStoreAsync(
+        ISessionStore sessionStore,
+        string? directory = null,
+        int? limit = null,
+        int offset = 0)
+    {
+        var projectKey = ProjectKeyForDirectory(directory);
+        var listing = await sessionStore.ListSessionsAsync(projectKey);
+
+        var results = new List<SDKSessionInfo>();
+        var semaphore = new SemaphoreSlim(16);
+
+        var tasks = listing.Select(async entry =>
+        {
+            await semaphore.WaitAsync();
+            try
+            {
+                var key = new SessionKey { ProjectKey = projectKey, SessionId = entry.SessionId };
+                var entries = await sessionStore.LoadAsync(key);
+                if (entries == null || entries.Count == 0)
+                    return null;
+
+                return new SDKSessionInfo
+                {
+                    SessionId = entry.SessionId,
+                    Summary = "",
+                    LastModified = entry.Mtime
+                };
+            }
+            catch
+            {
+                return new SDKSessionInfo
+                {
+                    SessionId = entry.SessionId,
+                    Summary = "",
+                    LastModified = entry.Mtime
+                };
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        }).ToList();
+
+        var settled = await Task.WhenAll(tasks);
+        results.AddRange(settled.Where(r => r != null).Select(r => r!));
+
+        results.Sort((a, b) => b.LastModified.CompareTo(a.LastModified));
+
+        if (offset > 0)
+            results = results.Skip(offset).ToList();
+        if (limit.HasValue && limit.Value > 0)
+            results = results.Take(limit.Value).ToList();
+
+        return results;
+    }
+
+    /// <summary>
+    /// Get session info from an ISessionStore.
+    /// </summary>
+    public static async Task<SDKSessionInfo?> GetSessionInfoFromStoreAsync(
+        ISessionStore sessionStore,
+        string sessionId,
+        string? directory = null)
+    {
+        if (!IsValidUuid(sessionId))
+            return null;
+
+        var projectKey = ProjectKeyForDirectory(directory);
+        var key = new SessionKey { ProjectKey = projectKey, SessionId = sessionId };
+        var entries = await sessionStore.LoadAsync(key);
+        if (entries == null || entries.Count == 0)
+            return null;
+
+        return new SDKSessionInfo
+        {
+            SessionId = sessionId,
+            Summary = "",
+            LastModified = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+        };
+    }
+
+    /// <summary>
+    /// Get session messages from an ISessionStore.
+    /// </summary>
+    public static async Task<List<SessionMessage>> GetSessionMessagesFromStoreAsync(
+        ISessionStore sessionStore,
+        string sessionId,
+        string? directory = null,
+        int? limit = null,
+        int offset = 0)
+    {
+        if (!IsValidUuid(sessionId))
+            return [];
+
+        var projectKey = ProjectKeyForDirectory(directory);
+        var key = new SessionKey { ProjectKey = projectKey, SessionId = sessionId };
+        var entries = await sessionStore.LoadAsync(key);
+        if (entries == null || entries.Count == 0)
+            return [];
+
+        var messages = StoreEntriesToMessages(entries, sessionId);
+        return ApplyPaging(messages, limit, offset);
+    }
+
+    /// <summary>
+    /// List subagent IDs from an ISessionStore.
+    /// </summary>
+    public static async Task<List<string>> ListSubagentsFromStoreAsync(
+        ISessionStore sessionStore,
+        string sessionId,
+        string? directory = null)
+    {
+        if (!IsValidUuid(sessionId))
+            return [];
+
+        var projectKey = ProjectKeyForDirectory(directory);
+        var subkeys = await sessionStore.ListSubkeysAsync(
+            new SessionListSubkeysKey { ProjectKey = projectKey, SessionId = sessionId });
+
+        var seen = new HashSet<string>();
+        var ids = new List<string>();
+        foreach (var subpath in subkeys)
+        {
+            if (!subpath.StartsWith("subagents/"))
+                continue;
+            var last = subpath.Split('/')[^1];
+            if (last.StartsWith("agent-"))
+            {
+                var agentId = last["agent-".Length..];
+                if (seen.Add(agentId))
+                    ids.Add(agentId);
+            }
+        }
+        return ids;
+    }
+
+    /// <summary>
+    /// Get subagent messages from an ISessionStore.
+    /// </summary>
+    public static async Task<List<SessionMessage>> GetSubagentMessagesFromStoreAsync(
+        ISessionStore sessionStore,
+        string sessionId,
+        string agentId,
+        string? directory = null,
+        int? limit = null,
+        int offset = 0)
+    {
+        if (!IsValidUuid(sessionId) || string.IsNullOrEmpty(agentId))
+            return [];
+
+        var projectKey = ProjectKeyForDirectory(directory);
+
+        var subpath = $"subagents/agent-{agentId}";
+        try
+        {
+            var subkeys = await sessionStore.ListSubkeysAsync(
+                new SessionListSubkeysKey { ProjectKey = projectKey, SessionId = sessionId });
+
+            var target = $"agent-{agentId}";
+            var match = subkeys.FirstOrDefault(sk =>
+                sk.StartsWith("subagents/") && sk.Split('/')[^1] == target);
+            if (match != null)
+                subpath = match;
+            else
+                return [];
+        }
+        catch (NotImplementedException)
+        {
+            // Fall through with default subpath
+        }
+
+        var key = new SessionKey
+        {
+            ProjectKey = projectKey,
+            SessionId = sessionId,
+            Subpath = subpath
+        };
+        var entries = await sessionStore.LoadAsync(key);
+        if (entries == null || entries.Count == 0)
+            return [];
+
+        var filtered = entries.Where(e => e.Type != "agent_metadata").ToList();
+        var messages = StoreEntriesToMessages(filtered, sessionId);
+        return ApplyPaging(messages, limit, offset);
+    }
+
+    private static List<SessionMessage> StoreEntriesToMessages(
+        List<SessionStoreEntry> entries, string sessionId)
+    {
+        var messages = new List<SessionMessage>();
+        foreach (var entry in entries)
+        {
+            if (entry.Type is not ("user" or "assistant"))
+                continue;
+            if (string.IsNullOrEmpty(entry.Uuid))
+                continue;
+
+            messages.Add(new SessionMessage
+            {
+                Type = entry.Type,
+                Uuid = entry.Uuid,
+                SessionId = sessionId,
+                Message = entry,
+                ParentToolUseId = null
+            });
+        }
+        return messages;
+    }
+
+    #endregion
 }

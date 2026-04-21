@@ -436,6 +436,15 @@ public record SystemPromptPreset
     [JsonPropertyName("append")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Append { get; init; }
+
+    /// <summary>
+    /// Strip per-user dynamic sections (working directory, auto-memory, git status)
+    /// from the system prompt so it stays static and cacheable across users.
+    /// The stripped content is re-injected into the first user message.
+    /// </summary>
+    [JsonPropertyName("exclude_dynamic_sections")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? ExcludeDynamicSections { get; init; }
 }
 
 /// <summary>
@@ -1826,6 +1835,8 @@ public record SandboxSettings
 [JsonDerivedType(typeof(ToolResultBlock), "tool_result")]
 [JsonDerivedType(typeof(ImageBlock), "image")]
 [JsonDerivedType(typeof(DocumentBlock), "document")]
+[JsonDerivedType(typeof(ServerToolUseBlock), "server_tool_use")]
+[JsonDerivedType(typeof(ServerToolResultBlock), "advisor_tool_result")]
 public abstract record ContentBlock;
 
 /// <summary>
@@ -1906,6 +1917,49 @@ public record ToolResultBlock : ContentBlock
     [JsonPropertyName("is_error")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? IsError { get; init; }
+}
+
+/// <summary>
+/// Server-side tool use block (e.g. advisor, web_search, web_fetch).
+/// These are tools the API executes server-side on the model's behalf.
+/// </summary>
+public record ServerToolUseBlock : ContentBlock
+{
+    /// <summary>
+    /// Gets the unique identifier for this server tool use.
+    /// </summary>
+    [JsonPropertyName("id")]
+    public required string Id { get; init; }
+
+    /// <summary>
+    /// Gets the name of the server tool being used.
+    /// </summary>
+    [JsonPropertyName("name")]
+    public required string Name { get; init; }
+
+    /// <summary>
+    /// Gets the input parameters for the server tool.
+    /// </summary>
+    [JsonPropertyName("input")]
+    public required Dictionary<string, object?> Input { get; init; }
+}
+
+/// <summary>
+/// Result block returned for a server-side tool call.
+/// </summary>
+public record ServerToolResultBlock : ContentBlock
+{
+    /// <summary>
+    /// Gets the ID of the server tool use this result corresponds to.
+    /// </summary>
+    [JsonPropertyName("tool_use_id")]
+    public required string ToolUseId { get; init; }
+
+    /// <summary>
+    /// Gets the content of the server tool result.
+    /// </summary>
+    [JsonPropertyName("content")]
+    public required Dictionary<string, object?> Content { get; init; }
 }
 
 /// <summary>
@@ -2757,6 +2811,220 @@ public record ClaudeAgentOptions
     [JsonPropertyName("task_budget")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public TaskBudget? TaskBudget { get; init; }
+
+    /// <summary>
+    /// Skills to enable for the main session.
+    /// null = no SDK auto-configuration, "all" = enable every discovered skill,
+    /// list of names = enable only the listed skills.
+    /// </summary>
+    [JsonIgnore]
+    public SkillsConfig? Skills { get; init; }
+
+    /// <summary>
+    /// Mirror session transcripts to external storage and enable store-backed resume.
+    /// </summary>
+    [JsonIgnore]
+    public ISessionStore? SessionStore { get; init; }
+
+    /// <summary>
+    /// Upper bound on SessionStore.Load/ListSubkeys calls during resume materialization, in milliseconds.
+    /// </summary>
+    [JsonPropertyName("load_timeout_ms")]
+    public int LoadTimeoutMs { get; init; } = 60_000;
+}
+
+#endregion
+
+#region Skills Config
+
+/// <summary>
+/// Skills configuration: either "all" or a specific list of skill names.
+/// </summary>
+public record SkillsConfig
+{
+    /// <summary>
+    /// Whether all skills are enabled.
+    /// </summary>
+    public bool All { get; init; }
+
+    /// <summary>
+    /// Specific skill names to enable (when All is false).
+    /// </summary>
+    public List<string>? Names { get; init; }
+
+    /// <summary>
+    /// Enable all skills.
+    /// </summary>
+    public static SkillsConfig EnableAll() => new() { All = true };
+
+    /// <summary>
+    /// Enable specific skills by name.
+    /// </summary>
+    public static SkillsConfig Enable(params string[] names) => new() { Names = [.. names] };
+}
+
+#endregion
+
+#region Session Store Types
+
+/// <summary>
+/// Identifies a session transcript or subagent transcript in a store.
+/// </summary>
+public record SessionKey
+{
+    /// <summary>
+    /// Caller-defined scope. Default: sanitized cwd.
+    /// </summary>
+    [JsonPropertyName("project_key")]
+    public required string ProjectKey { get; init; }
+
+    /// <summary>
+    /// Session identifier.
+    /// </summary>
+    [JsonPropertyName("session_id")]
+    public required string SessionId { get; init; }
+
+    /// <summary>
+    /// Omit for the main transcript; set for subagent files.
+    /// </summary>
+    [JsonPropertyName("subpath")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Subpath { get; init; }
+}
+
+/// <summary>
+/// One JSONL transcript line as observed by a SessionStore adapter.
+/// </summary>
+public record SessionStoreEntry
+{
+    /// <summary>
+    /// Entry type discriminator.
+    /// </summary>
+    [JsonPropertyName("type")]
+    public required string Type { get; init; }
+
+    /// <summary>
+    /// Optional UUID.
+    /// </summary>
+    [JsonPropertyName("uuid")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Uuid { get; init; }
+
+    /// <summary>
+    /// Optional timestamp.
+    /// </summary>
+    [JsonPropertyName("timestamp")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Timestamp { get; init; }
+
+    /// <summary>
+    /// All additional fields stored as extensible data.
+    /// </summary>
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+}
+
+/// <summary>
+/// Entry returned by ISessionStore.ListSessions.
+/// </summary>
+public record SessionStoreListEntry
+{
+    /// <summary>
+    /// Session identifier.
+    /// </summary>
+    [JsonPropertyName("session_id")]
+    public required string SessionId { get; init; }
+
+    /// <summary>
+    /// Last-modified time in Unix epoch milliseconds.
+    /// </summary>
+    [JsonPropertyName("mtime")]
+    public required long Mtime { get; init; }
+}
+
+/// <summary>
+/// Incrementally-maintained session summary.
+/// </summary>
+public record SessionSummaryEntry
+{
+    /// <summary>
+    /// Session identifier.
+    /// </summary>
+    [JsonPropertyName("session_id")]
+    public required string SessionId { get; init; }
+
+    /// <summary>
+    /// Storage write time in Unix epoch milliseconds.
+    /// </summary>
+    [JsonPropertyName("mtime")]
+    public long Mtime { get; set; }
+
+    /// <summary>
+    /// Opaque SDK-owned summary state. Persist verbatim.
+    /// </summary>
+    [JsonPropertyName("data")]
+    public required Dictionary<string, object?> Data { get; init; }
+}
+
+/// <summary>
+/// Key argument to ISessionStore.ListSubkeys (no subpath).
+/// </summary>
+public record SessionListSubkeysKey
+{
+    /// <summary>
+    /// Project key scope.
+    /// </summary>
+    [JsonPropertyName("project_key")]
+    public required string ProjectKey { get; init; }
+
+    /// <summary>
+    /// Session identifier.
+    /// </summary>
+    [JsonPropertyName("session_id")]
+    public required string SessionId { get; init; }
+}
+
+/// <summary>
+/// Adapter for mirroring session transcripts to external storage.
+/// Only Append and Load are required. Other methods are optional.
+/// </summary>
+public interface ISessionStore
+{
+    /// <summary>
+    /// Mirror a batch of transcript entries.
+    /// Called AFTER the subprocess's local write succeeds.
+    /// </summary>
+    Task AppendAsync(SessionKey key, List<SessionStoreEntry> entries);
+
+    /// <summary>
+    /// Load a full session for resume.
+    /// Return null for a key that was never written.
+    /// </summary>
+    Task<List<SessionStoreEntry>?> LoadAsync(SessionKey key);
+
+    /// <summary>
+    /// List sessions for a project_key. Returns IDs + modification times.
+    /// Optional — default throws NotImplementedException.
+    /// </summary>
+    Task<List<SessionStoreListEntry>> ListSessionsAsync(string projectKey) => throw new NotImplementedException();
+
+    /// <summary>
+    /// Return incrementally-maintained summaries for all sessions in one call.
+    /// Optional — default throws NotImplementedException.
+    /// </summary>
+    Task<List<SessionSummaryEntry>> ListSessionSummariesAsync(string projectKey) => throw new NotImplementedException();
+
+    /// <summary>
+    /// Delete a session. Deleting main transcript should cascade subkeys.
+    /// Optional — default throws NotImplementedException.
+    /// </summary>
+    Task DeleteAsync(SessionKey key) => throw new NotImplementedException();
+
+    /// <summary>
+    /// List all subpath keys under a session (e.g. subagent transcripts).
+    /// Optional — default throws NotImplementedException.
+    /// </summary>
+    Task<List<string>> ListSubkeysAsync(SessionListSubkeysKey key) => throw new NotImplementedException();
 }
 
 #endregion
@@ -3956,6 +4224,26 @@ public record TaskNotificationMessage : Message
     [JsonPropertyName("usage")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public TaskUsage? Usage { get; init; }
+}
+
+/// <summary>
+/// System message emitted when a SessionStore.Append call fails.
+/// Non-fatal — the local-disk transcript is already durable.
+/// </summary>
+public record MirrorErrorMessage : SystemMessage
+{
+    /// <summary>
+    /// Gets the session key where the mirror error occurred.
+    /// </summary>
+    [JsonPropertyName("key")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public SessionKey? Key { get; init; }
+
+    /// <summary>
+    /// Gets the error message.
+    /// </summary>
+    [JsonPropertyName("error_message")]
+    public string ErrorMessage { get; init; } = "";
 }
 
 #endregion

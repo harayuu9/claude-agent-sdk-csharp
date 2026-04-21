@@ -668,6 +668,37 @@ internal class SubprocessCliTransport : Transport
         return JsonSerializer.Serialize(settingsObj);
     }
 
+    private (List<string> AllowedTools, List<SettingSource>? SettingSources) ApplySkillsDefaults()
+    {
+        var allowedTools = new List<string>(_options.AllowedTools);
+        var settingSources = _options.SettingSources != null
+            ? new List<SettingSource>(_options.SettingSources)
+            : (List<SettingSource>?)null;
+
+        var skills = _options.Skills;
+        if (skills == null)
+            return (allowedTools, settingSources);
+
+        if (skills.All)
+        {
+            if (!allowedTools.Contains("Skill"))
+                allowedTools.Add("Skill");
+        }
+        else if (skills.Names != null)
+        {
+            foreach (var name in skills.Names)
+            {
+                var pattern = $"Skill({name})";
+                if (!allowedTools.Contains(pattern))
+                    allowedTools.Add(pattern);
+            }
+        }
+
+        settingSources ??= [SettingSource.User, SettingSource.Project];
+
+        return (allowedTools, settingSources);
+    }
+
     private List<string> BuildCommand()
     {
         var cmd = new List<string> { _cliPath, "--output-format", "stream-json", "--verbose" };
@@ -723,9 +754,11 @@ internal class SubprocessCliTransport : Transport
             }
         }
 
-        if (_options.AllowedTools.Count > 0)
+        var (effectiveAllowedTools, effectiveSettingSources) = ApplySkillsDefaults();
+
+        if (effectiveAllowedTools.Count > 0)
         {
-            cmd.AddRange(["--allowedTools", string.Join(",", _options.AllowedTools)]);
+            cmd.AddRange(["--allowedTools", string.Join(",", effectiveAllowedTools)]);
         }
 
         if (_options.MaxTurns.HasValue)
@@ -828,11 +861,6 @@ internal class SubprocessCliTransport : Transport
             cmd.Add("--include-partial-messages");
         }
 
-        if (_options.ForkSession)
-        {
-            cmd.Add("--fork-session");
-        }
-
         // Handle agents
         if (_options.Agents != null && _options.Agents.Count > 0)
         {
@@ -840,11 +868,21 @@ internal class SubprocessCliTransport : Transport
             cmd.AddRange(["--agents", agentsJson]);
         }
 
-        // Handle setting sources (omit flag when empty or unset)
-        if (_options.SettingSources != null && _options.SettingSources.Count > 0)
+        if (_options.ForkSession)
         {
-            var sourcesValue = string.Join(",", _options.SettingSources.Select(GetSettingSourceValue));
-            cmd.AddRange(["--setting-sources", sourcesValue]);
+            cmd.Add("--fork-session");
+        }
+
+        if (_options.SessionStore != null)
+        {
+            cmd.Add("--session-mirror");
+        }
+
+        // Handle setting sources (use = syntax; pass flag for empty list to disable filesystem settings)
+        if (effectiveSettingSources != null)
+        {
+            var sourcesValue = string.Join(",", effectiveSettingSources.Select(GetSettingSourceValue));
+            cmd.Add($"--setting-sources={sourcesValue}");
         }
 
         // Add plugin directories
@@ -893,20 +931,20 @@ internal class SubprocessCliTransport : Transport
             cmd.AddRange(["--task-budget", _options.TaskBudget.Total.ToString()]);
         }
 
-        // Thinking configuration (takes precedence over max_thinking_tokens)
+        // Resolve thinking config -> --thinking / --max-thinking-tokens
+        // `thinking` takes precedence over the deprecated `max_thinking_tokens`
         if (_options.Thinking != null)
         {
             switch (_options.Thinking)
             {
                 case ThinkingConfigAdaptive:
-                    cmd.AddRange(["--thinking-mode", "adaptive"]);
+                    cmd.AddRange(["--thinking", "adaptive"]);
                     break;
                 case ThinkingConfigEnabled enabled:
-                    cmd.AddRange(["--thinking-mode", "enabled"]);
-                    cmd.AddRange(["--thinking-budget-tokens", enabled.BudgetTokens.ToString()]);
+                    cmd.AddRange(["--max-thinking-tokens", enabled.BudgetTokens.ToString()]);
                     break;
                 case ThinkingConfigDisabled:
-                    cmd.AddRange(["--thinking-mode", "disabled"]);
+                    cmd.AddRange(["--thinking", "disabled"]);
                     break;
             }
         }

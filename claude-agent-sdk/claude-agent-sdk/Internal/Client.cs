@@ -24,13 +24,44 @@ internal class InternalClient
         Transport.Transport? transport = null,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        // 1. Validate and configure permission settings (matching TypeScript SDK logic)
+        // Fail fast on invalid session_store option combinations
+        SessionStoreValidation.Validate(options);
+
+        // Resume + session_store: load the session from the store
+        var materialized = transport == null
+            ? await SessionResume.MaterializeResumeSessionAsync(options)
+            : null;
+
+        var inner = ProcessQueryInnerAsync(prompt, options, transport, materialized, ct);
+        try
+        {
+            await foreach (var msg in inner.WithCancellation(ct))
+            {
+                yield return msg;
+            }
+        }
+        finally
+        {
+            if (materialized != null)
+            {
+                await materialized.CleanupAsync();
+            }
+        }
+    }
+
+    private async IAsyncEnumerable<Message> ProcessQueryInnerAsync(
+        object prompt,
+        ClaudeAgentOptions options,
+        Transport.Transport? transport,
+        MaterializedResume? materialized,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        // 1. Validate and configure permission settings
         var configuredOptions = options;
         var isStreaming = prompt is not string;
 
         if (options.CanUseTool != null)
         {
-            // canUseTool callback requires streaming mode (IAsyncEnumerable prompt)
             if (!isStreaming)
             {
                 throw new ArgumentException(
@@ -39,7 +70,6 @@ internal class InternalClient
                     nameof(options));
             }
 
-            // canUseTool and permission_prompt_tool_name are mutually exclusive
             if (!string.IsNullOrEmpty(options.PermissionPromptToolName))
             {
                 throw new ArgumentException(
@@ -48,8 +78,12 @@ internal class InternalClient
                     nameof(options));
             }
 
-            // Automatically set permission_prompt_tool_name to "stdio" for control protocol
             configuredOptions = options with { PermissionPromptToolName = "stdio" };
+        }
+
+        if (materialized != null)
+        {
+            configuredOptions = SessionResume.ApplyMaterializedOptions(configuredOptions, materialized);
         }
 
         // 2. Use provided transport or create subprocess transport
@@ -61,13 +95,37 @@ internal class InternalClient
         // 4. Extract SDK MCP servers from configured options
         var sdkMcpServers = ExtractSdkMcpServers(configuredOptions);
 
+        // Extract exclude_dynamic_sections from preset system prompt
+        bool? excludeDynamicSections = null;
+        if (configuredOptions.SystemPrompt is SystemPromptPreset preset)
+        {
+            excludeDynamicSections = preset.ExcludeDynamicSections;
+        }
+
         // 5. Create Query to handle control protocol
         var query = new Query(
             chosenTransport,
             isStreaming,
             configuredOptions.CanUseTool,
             configuredOptions.Hooks,
-            sdkMcpServers);
+            sdkMcpServers,
+            excludeDynamicSections: excludeDynamicSections,
+            skills: configuredOptions.Skills);
+
+        // Setup transcript mirror batcher if session store is configured
+        if (configuredOptions.SessionStore != null)
+        {
+            query.SetTranscriptMirrorBatcher(
+                SessionResume.BuildMirrorBatcher(
+                    configuredOptions.SessionStore,
+                    materialized,
+                    configuredOptions.Env,
+                    (key, error) =>
+                    {
+                        query.ReportMirrorError(key, error);
+                        return Task.CompletedTask;
+                    }));
+        }
 
         try
         {
@@ -83,15 +141,12 @@ internal class InternalClient
             // 6. Stream input if it's an IAsyncEnumerable (streaming mode)
             if (isStreaming && prompt is IAsyncEnumerable<Dictionary<string, object?>> inputStream)
             {
-                // Start streaming in background (fire-and-forget)
                 _ = query.StreamInputAsync(inputStream, ct);
             }
-            // For string prompts, the prompt is already passed via CLI args
 
             // 7. Yield parsed messages
             await foreach (var data in query.ReceiveMessagesAsync(ct))
             {
-                // Convert Dictionary to JsonElement for MessageParser
                 var jsonElement = DictToJsonElement(data);
                 var message = MessageParser.ParseMessage(jsonElement);
                 if (message != null)

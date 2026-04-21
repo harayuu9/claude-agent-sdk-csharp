@@ -215,6 +215,7 @@ public static class MessageParser
                 "task_progress" => ParseTaskProgressMessage(data),
                 "task_notification" => ParseTaskNotificationMessage(data),
                 "rate_limit" => ParseRateLimitEvent(data),
+                "mirror_error" => ParseMirrorErrorMessage(data, subtype),
                 _ => new SystemMessage
                 {
                     Subtype = subtype,
@@ -316,6 +317,31 @@ public static class MessageParser
             ToolUseId = data.TryGetProperty("tool_use_id", out var tui) && tui.ValueKind == JsonValueKind.String
                 ? tui.GetString() : null,
             Usage = usage
+        };
+    }
+
+    private static MirrorErrorMessage ParseMirrorErrorMessage(JsonElement data, string subtype)
+    {
+        SessionKey? key = null;
+        if (data.TryGetProperty("key", out var keyElem) && keyElem.ValueKind == JsonValueKind.Object)
+        {
+            key = new SessionKey
+            {
+                ProjectKey = keyElem.TryGetProperty("project_key", out var pk) ? pk.GetString() ?? "" : "",
+                SessionId = keyElem.TryGetProperty("session_id", out var sid) ? sid.GetString() ?? "" : "",
+                Subpath = keyElem.TryGetProperty("subpath", out var sp) && sp.ValueKind == JsonValueKind.String ? sp.GetString() : null
+            };
+        }
+
+        var error = data.TryGetProperty("error", out var errElem) && errElem.ValueKind == JsonValueKind.String
+            ? errElem.GetString() ?? "" : "";
+
+        return new MirrorErrorMessage
+        {
+            Subtype = subtype,
+            Data = JsonElementToDict(data) ?? new Dictionary<string, object?>(),
+            Key = key,
+            ErrorMessage = error
         };
     }
 
@@ -726,6 +752,23 @@ public static class MessageParser
                             blocks.Add(new ImageBlock { Source = imageSource });
                         }
                     }
+                    break;
+
+                case "server_tool_use":
+                    blocks.Add(new ServerToolUseBlock
+                    {
+                        Id = block.GetProperty("id").GetString() ?? "",
+                        Name = block.GetProperty("name").GetString() ?? "",
+                        Input = JsonElementToDict(block.GetProperty("input")) ?? new Dictionary<string, object?>()
+                    });
+                    break;
+
+                case "advisor_tool_result":
+                    blocks.Add(new ServerToolResultBlock
+                    {
+                        ToolUseId = block.GetProperty("tool_use_id").GetString() ?? "",
+                        Content = JsonElementToDict(block.GetProperty("content")) ?? new Dictionary<string, object?>()
+                    });
                     break;
 
                 case "document":

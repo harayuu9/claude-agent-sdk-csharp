@@ -89,6 +89,16 @@ public static partial class SessionMutations
             ?? throw new FileNotFoundException($"Session not found: {sessionId}");
 
         File.Delete(sessionFile);
+
+        // Cascade: remove subagent transcripts directory
+        var subagentDir = Path.Combine(
+            Path.GetDirectoryName(sessionFile)!,
+            sessionId);
+        if (Directory.Exists(subagentDir))
+        {
+            try { Directory.Delete(subagentDir, recursive: true); }
+            catch { /* best-effort */ }
+        }
     }
 
     /// <summary>
@@ -436,6 +446,194 @@ public static partial class SessionMutations
         {
             throw new ArgumentException($"Invalid UUID: {value}", nameof(value));
         }
+    }
+
+    private static bool IsValidUuid(string value) => Guid.TryParse(value, out _);
+
+    private static string IsoNow() =>
+        DateTimeOffset.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+
+    #endregion
+
+    #region SessionStore-backed Variants
+
+    /// <summary>
+    /// Rename a session by appending a custom-title entry to an ISessionStore.
+    /// </summary>
+    public static async Task RenameSessionViaStoreAsync(
+        ISessionStore sessionStore,
+        string sessionId,
+        string title,
+        string? directory = null)
+    {
+        ValidateUuid(sessionId);
+        var stripped = title.Trim();
+        if (string.IsNullOrEmpty(stripped))
+            throw new ArgumentException("title must be non-empty", nameof(title));
+
+        var projectKey = Sessions.ProjectKeyForDirectory(directory);
+        var key = new SessionKey { ProjectKey = projectKey, SessionId = sessionId };
+        var entry = new SessionStoreEntry
+        {
+            Type = "custom-title",
+            Uuid = Guid.NewGuid().ToString(),
+            Timestamp = IsoNow()
+        };
+        // Use extension data for extra fields
+        entry.ExtensionData = new Dictionary<string, JsonElement>
+        {
+            ["customTitle"] = JsonSerializer.SerializeToElement(stripped),
+            ["sessionId"] = JsonSerializer.SerializeToElement(sessionId)
+        };
+        await sessionStore.AppendAsync(key, [entry]);
+    }
+
+    /// <summary>
+    /// Tag a session by appending a tag entry to an ISessionStore.
+    /// </summary>
+    public static async Task TagSessionViaStoreAsync(
+        ISessionStore sessionStore,
+        string sessionId,
+        string? tag,
+        string? directory = null)
+    {
+        ValidateUuid(sessionId);
+        if (tag != null)
+        {
+            var sanitized = SanitizeUnicode(tag).Trim();
+            if (string.IsNullOrEmpty(sanitized))
+                throw new ArgumentException("tag must be non-empty (use null to clear)", nameof(tag));
+            tag = sanitized;
+        }
+
+        var projectKey = Sessions.ProjectKeyForDirectory(directory);
+        var key = new SessionKey { ProjectKey = projectKey, SessionId = sessionId };
+        var entry = new SessionStoreEntry
+        {
+            Type = "tag",
+            Uuid = Guid.NewGuid().ToString(),
+            Timestamp = IsoNow()
+        };
+        entry.ExtensionData = new Dictionary<string, JsonElement>
+        {
+            ["tag"] = JsonSerializer.SerializeToElement(tag ?? ""),
+            ["sessionId"] = JsonSerializer.SerializeToElement(sessionId)
+        };
+        await sessionStore.AppendAsync(key, [entry]);
+    }
+
+    /// <summary>
+    /// Delete a session from an ISessionStore.
+    /// </summary>
+    public static async Task DeleteSessionViaStoreAsync(
+        ISessionStore sessionStore,
+        string sessionId,
+        string? directory = null)
+    {
+        ValidateUuid(sessionId);
+
+        try
+        {
+            var projectKey = Sessions.ProjectKeyForDirectory(directory);
+            var key = new SessionKey { ProjectKey = projectKey, SessionId = sessionId };
+            await sessionStore.DeleteAsync(key);
+        }
+        catch (NotImplementedException)
+        {
+            // Store does not implement delete — no-op
+        }
+    }
+
+    /// <summary>
+    /// Fork a session into a new branch with fresh UUIDs via an ISessionStore.
+    /// </summary>
+    public static async Task<ForkSessionResult> ForkSessionViaStoreAsync(
+        ISessionStore sessionStore,
+        string sessionId,
+        string? directory = null,
+        string? upToMessageId = null,
+        string? title = null)
+    {
+        ValidateUuid(sessionId);
+        if (upToMessageId != null && !IsValidUuid(upToMessageId))
+            throw new ArgumentException($"Invalid up_to_message_id: {upToMessageId}");
+
+        var projectKey = Sessions.ProjectKeyForDirectory(directory);
+        var srcKey = new SessionKey { ProjectKey = projectKey, SessionId = sessionId };
+        var loaded = await sessionStore.LoadAsync(srcKey)
+            ?? throw new FileNotFoundException($"Session {sessionId} not found");
+
+        if (loaded.Count == 0)
+            throw new ArgumentException("Session has no entries to fork");
+
+        // Filter to transcript entries
+        var transcript = loaded
+            .Where(e => e.Type is "user" or "assistant" && !string.IsNullOrEmpty(e.Uuid))
+            .ToList();
+
+        if (transcript.Count == 0)
+            throw new ArgumentException("Session has no messages to fork");
+
+        // Slice if needed
+        if (upToMessageId != null)
+        {
+            var idx = transcript.FindIndex(e => e.Uuid == upToMessageId);
+            if (idx < 0)
+                throw new ArgumentException($"Message {upToMessageId} not found in session");
+            transcript = transcript[..(idx + 1)];
+        }
+
+        // Generate new session ID and UUID mapping
+        var newSessionId = Guid.NewGuid().ToString();
+        var uuidMap = new Dictionary<string, string>();
+        foreach (var entry in transcript)
+        {
+            if (entry.Uuid != null && !uuidMap.ContainsKey(entry.Uuid))
+                uuidMap[entry.Uuid] = Guid.NewGuid().ToString();
+        }
+
+        // Build forked entries (simplified - serialize and re-parse to remap UUIDs)
+        var forkedEntries = new List<SessionStoreEntry>();
+        var now = IsoNow();
+
+        foreach (var entry in transcript)
+        {
+            var json = JsonSerializer.Serialize(entry);
+            var dict = JsonSerializer.Deserialize<Dictionary<string, object?>>(json)!;
+
+            if (entry.Uuid != null && uuidMap.TryGetValue(entry.Uuid, out var newUuid))
+                dict["uuid"] = newUuid;
+            dict["sessionId"] = newSessionId;
+
+            var remappedJson = JsonSerializer.Serialize(dict);
+            var remapped = JsonSerializer.Deserialize<SessionStoreEntry>(remappedJson)!;
+            forkedEntries.Add(remapped);
+        }
+
+        // Determine title
+        var forkTitle = title?.Trim();
+        if (string.IsNullOrEmpty(forkTitle))
+            forkTitle = "Forked session (fork)";
+
+        // Add title entry
+        var titleEntry = new SessionStoreEntry
+        {
+            Type = "custom-title",
+            Uuid = Guid.NewGuid().ToString(),
+            Timestamp = now
+        };
+        titleEntry.ExtensionData = new Dictionary<string, JsonElement>
+        {
+            ["customTitle"] = JsonSerializer.SerializeToElement(forkTitle),
+            ["sessionId"] = JsonSerializer.SerializeToElement(newSessionId)
+        };
+        forkedEntries.Add(titleEntry);
+
+        // Write to store
+        var dstKey = new SessionKey { ProjectKey = projectKey, SessionId = newSessionId };
+        await sessionStore.AppendAsync(dstKey, forkedEntries);
+
+        return new ForkSessionResult { SessionId = newSessionId };
     }
 
     #endregion

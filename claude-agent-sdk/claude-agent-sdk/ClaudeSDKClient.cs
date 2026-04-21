@@ -95,6 +95,7 @@ public sealed class ClaudeSDKClient : IAsyncDisposable
     // Connection state
     private Transport? _transport;
     private InternalQuery? _query;
+    private MaterializedResume? _materialized;
     private bool _connected;
     private bool _disposed;
 
@@ -145,16 +146,38 @@ public sealed class ClaudeSDKClient : IAsyncDisposable
             throw new InvalidOperationException("Already connected. Call DisconnectAsync() first.");
         }
 
+        // Fail fast on invalid session_store option combinations
+        SessionStoreValidation.Validate(_options);
+
         // Set the entrypoint environment variable
         Environment.SetEnvironmentVariable("CLAUDE_CODE_ENTRYPOINT", "sdk-csharp-client");
 
+        // Resume/continue + session_store: load session from store
+        _materialized = _customTransport == null
+            ? await SessionResume.MaterializeResumeSessionAsync(_options)
+            : null;
+
+        try
+        {
+            await ConnectInnerAsync(prompt, ct);
+        }
+        catch
+        {
+            await DisconnectAsync();
+            throw;
+        }
+    }
+
+    private async Task ConnectInnerAsync(object? prompt, CancellationToken ct)
+    {
         // Validate and configure options
         var configuredOptions = ValidateAndConfigureOptions(_options, prompt);
 
-        // Create transport
-        // ClaudeSDKClient always uses streaming mode for bidirectional communication
-        // Always pass IAsyncEnumerable to transport to ensure streaming mode
-        // (string prompts are streamed later via StreamInputAsync)
+        if (_materialized != null)
+        {
+            configuredOptions = SessionResume.ApplyMaterializedOptions(configuredOptions, _materialized);
+        }
+
         var effectivePrompt = prompt switch
         {
             null => EmptyInputStream(),
@@ -168,13 +191,37 @@ public sealed class ClaudeSDKClient : IAsyncDisposable
         // Extract SDK MCP servers
         var sdkMcpServers = ExtractSdkMcpServers(configuredOptions);
 
+        // Extract exclude_dynamic_sections from preset system prompt
+        bool? excludeDynamicSections = null;
+        if (configuredOptions.SystemPrompt is SystemPromptPreset preset)
+        {
+            excludeDynamicSections = preset.ExcludeDynamicSections;
+        }
+
         // Create internal Query handler
         _query = new InternalQuery(
             _transport,
-            isStreamingMode: true, // Always streaming for ClaudeSDKClient
+            isStreamingMode: true,
             configuredOptions.CanUseTool,
             configuredOptions.Hooks,
-            sdkMcpServers);
+            sdkMcpServers,
+            excludeDynamicSections: excludeDynamicSections,
+            skills: configuredOptions.Skills);
+
+        // Setup transcript mirror batcher if session store is configured
+        if (configuredOptions.SessionStore != null)
+        {
+            _query.SetTranscriptMirrorBatcher(
+                SessionResume.BuildMirrorBatcher(
+                    configuredOptions.SessionStore,
+                    _materialized,
+                    configuredOptions.Env,
+                    (key, error) =>
+                    {
+                        _query.ReportMirrorError(key, error);
+                        return Task.CompletedTask;
+                    }));
+        }
 
         // Start reading messages and initialize
         _query.Start();
@@ -195,15 +242,19 @@ public sealed class ClaudeSDKClient : IAsyncDisposable
     /// </summary>
     public async Task DisconnectAsync()
     {
-        if (!_connected || _query == null)
+        if (_query != null)
         {
-            return;
+            await _query.CloseAsync();
+            _query = null;
         }
-
-        await _query.CloseAsync();
-        _query = null;
         _transport = null;
         _connected = false;
+
+        if (_materialized != null)
+        {
+            await _materialized.CleanupAsync();
+            _materialized = null;
+        }
     }
 
     /// <summary>

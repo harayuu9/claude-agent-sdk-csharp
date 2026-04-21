@@ -122,6 +122,8 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
     private readonly Dictionary<HookEvent, List<HookMatcher>>? _hooks;
     private readonly Dictionary<string, ISdkMcpServer>? _sdkMcpServers;
     private readonly TimeSpan _initializeTimeout;
+    private readonly bool? _excludeDynamicSections;
+    private readonly SkillsConfig? _skills;
 
     // Control protocol state
     private readonly ConcurrentDictionary<string, TaskCompletionSource<Dictionary<string, object?>>> _pendingControlResponses = new();
@@ -141,6 +143,9 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
     // Result tracking for SDK MCP servers
     private readonly TaskCompletionSource<bool> _firstResultEvent = new();
     private readonly TimeSpan _streamCloseTimeout;
+
+    // SessionStore mirroring
+    private TranscriptMirrorBatcher? _transcriptMirrorBatcher;
 
     /// <summary>
     /// Whether the query has been initialized.
@@ -176,7 +181,9 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
         Dictionary<HookEvent, List<HookMatcher>>? hooks = null,
         Dictionary<string, ISdkMcpServer>? sdkMcpServers = null,
         TimeSpan? initializeTimeout = null,
-        ILogger<Query>? logger = null)
+        ILogger<Query>? logger = null,
+        bool? excludeDynamicSections = null,
+        SkillsConfig? skills = null)
     {
         _transport = transport;
         _isStreamingMode = isStreamingMode;
@@ -185,6 +192,8 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
         _sdkMcpServers = sdkMcpServers;
         _initializeTimeout = initializeTimeout ?? TimeSpan.FromSeconds(60);
         _logger = logger;
+        _excludeDynamicSections = excludeDynamicSections;
+        _skills = skills;
 
         _messageChannel = Channel.CreateBounded<Dictionary<string, object?>>(
             new BoundedChannelOptions(100)
@@ -195,6 +204,31 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
         var envTimeout = Environment.GetEnvironmentVariable("CLAUDE_CODE_STREAM_CLOSE_TIMEOUT");
         _streamCloseTimeout = TimeSpan.FromMilliseconds(
             double.TryParse(envTimeout, out var ms) ? ms : 60000);
+    }
+
+    /// <summary>
+    /// Attach a batcher that receives transcript_mirror frames.
+    /// </summary>
+    internal void SetTranscriptMirrorBatcher(TranscriptMirrorBatcher batcher)
+    {
+        _transcriptMirrorBatcher = batcher;
+    }
+
+    /// <summary>
+    /// Surface a SessionStore.Append failure as a system message.
+    /// </summary>
+    internal void ReportMirrorError(SessionKey? key, string error)
+    {
+        var msg = new Dictionary<string, object?>
+        {
+            ["type"] = "system",
+            ["subtype"] = "mirror_error",
+            ["error"] = error,
+            ["key"] = key,
+            ["uuid"] = Guid.NewGuid().ToString(),
+            ["session_id"] = key?.SessionId ?? ""
+        };
+        _messageChannel.Writer.TryWrite(msg);
     }
 
     #region Initialization
@@ -234,13 +268,24 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
                 var agentDict = JsonSerializer.Deserialize<Dictionary<string, object?>>(agentJson);
                 if (agentDict != null)
                 {
-                    // Remove null values
                     var cleaned = agentDict.Where(kv => kv.Value != null)
                         .ToDictionary(kv => kv.Key, kv => kv.Value);
                     agentsDict[name] = cleaned;
                 }
             }
             request["agents"] = agentsDict;
+        }
+
+        if (_excludeDynamicSections.HasValue)
+        {
+            request["excludeDynamicSections"] = _excludeDynamicSections.Value;
+        }
+
+        // 'all' and omitted are equivalent at the wire level (no filter), so
+        // only send the field when it's an explicit list.
+        if (_skills is { All: false, Names: not null })
+        {
+            request["skills"] = _skills.Names;
         }
 
         // Use longer timeout for initialize since MCP servers may take time to start
@@ -335,18 +380,33 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
                         continue;
 
                     case "control_request":
-                        // Handle incoming control requests from CLI
                         _ = HandleControlRequestAsync(message);
                         continue;
 
                     case "control_cancel_request":
                         HandleControlCancelRequest(message);
                         continue;
+
+                    case "transcript_mirror":
+                        if (_transcriptMirrorBatcher != null)
+                        {
+                            var filePath = GetStringValue(message, "filePath") ?? "";
+                            var entries = message.GetValueOrDefault("entries") as List<object>;
+                            if (!string.IsNullOrEmpty(filePath) && entries != null)
+                            {
+                                _transcriptMirrorBatcher.Enqueue(filePath, entries);
+                            }
+                        }
+                        continue;
                 }
 
                 // Track results for proper stream closure
                 if (msgType == "result")
                 {
+                    if (_transcriptMirrorBatcher != null)
+                    {
+                        await _transcriptMirrorBatcher.FlushAsync();
+                    }
                     _firstResultEvent.TrySetResult(true);
                 }
 
@@ -376,6 +436,15 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
         }
         finally
         {
+            // Flush any remaining transcript mirror entries before closing
+            if (_transcriptMirrorBatcher != null)
+            {
+                try { await _transcriptMirrorBatcher.FlushAsync(); } catch { /* best-effort */ }
+            }
+
+            // Unblock any waiters for first result on early exit
+            _firstResultEvent.TrySetResult(true);
+
             // Always signal end of stream
             await _messageChannel.Writer.WriteAsync(
                 new Dictionary<string, object?> { ["type"] = "end" },
@@ -1111,6 +1180,12 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
         }
 
         _closed = true;
+
+        // Final-flush mirror entries before tearing down
+        if (_transcriptMirrorBatcher != null)
+        {
+            try { await _transcriptMirrorBatcher.CloseAsync(); } catch { /* best-effort */ }
+        }
 
         // Cancel reading task
         _readCts?.Cancel();
