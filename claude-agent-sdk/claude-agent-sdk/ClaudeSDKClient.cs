@@ -351,9 +351,9 @@ public sealed class ClaudeSDKClient : IAsyncDisposable
     }
 
     /// <summary>
-    /// Send a new prompt/query with content blocks (supports text and images).
+    /// Send a new prompt/query with content blocks (supports text, images, and documents).
     /// </summary>
-    /// <param name="contentBlocks">The content blocks to send (e.g., TextBlock, ImageBlock).</param>
+    /// <param name="contentBlocks">The content blocks to send (e.g., TextBlock, ImageBlock, DocumentBlock).</param>
     /// <param name="sessionId">Optional session ID for multi-session support.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <exception cref="CLIConnectionException">If not connected.</exception>

@@ -20,7 +20,8 @@ Claude Agent SDK for C# provides two main APIs for interacting with Claude Code:
 ### Key Features
 
 - Two flexible APIs for different use cases
-- Image input support (base64, URL, local file)
+- Image input support (base64, URL, local file) — PNG, JPEG, GIF, WEBP
+- Document input support (base64, URL, plain text, local file) — PDF, TXT, CSV, HTML, DOCX, XLSX
 - MCP (Model Context Protocol) support for custom tools
 - Custom agent definitions with extended configuration
 - Hooks for event handling (PreToolUse, PostToolUse, Notification, etc.)
@@ -165,6 +166,58 @@ await client.QueryAsync([
 
 Supported file extensions for auto-detection: `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`.
 You can also pass an explicit media type: `ImageBlock.FromFile("image.bmp", "image/bmp")`.
+
+> **Note**: This is a C# SDK-unique feature not available in the original Python SDK.
+
+### Document Input
+
+Send documents (PDF, TXT, CSV, HTML, DOCX, XLSX, etc.) to Claude alongside text using `DocumentBlock`. Supports base64-encoded data, URLs, plain text, and local files.
+
+```csharp
+// From a local file (media type auto-detected from extension)
+await client.QueryAsync([
+    new TextBlock { Text = "Summarize this PDF." },
+    DocumentBlock.FromFile("report.pdf")
+]);
+
+// From a URL (PDFs are fetched server-side)
+await client.QueryAsync([
+    new TextBlock { Text = "What's in this document?" },
+    DocumentBlock.FromUrl("https://example.com/whitepaper.pdf")
+]);
+
+// From base64 data
+await client.QueryAsync([
+    DocumentBlock.FromBase64(base64Pdf, "application/pdf")
+]);
+
+// From plain text content (e.g. CSV / HTML / TXT inline)
+await client.QueryAsync([
+    new TextBlock { Text = "Analyze this CSV." },
+    DocumentBlock.FromText("name,score\nAlice,90\nBob,82\n", "text/csv")
+]);
+
+// Async file loading
+var doc = await DocumentBlock.FromFileAsync("large-spec.docx");
+await client.QueryAsync([
+    new TextBlock { Text = "Find inconsistencies in this spec." },
+    doc
+]);
+
+// With title, context, and citations
+await client.QueryAsync([
+    new TextBlock { Text = "Cite the relevant section." },
+    DocumentBlock.FromFile("policy.pdf") with
+    {
+        Title = "Acme Privacy Policy 2026",
+        Context = "Public-facing policy for end users",
+        Citations = new CitationsConfig { Enabled = true }
+    }
+]);
+```
+
+Supported file extensions for auto-detection: `.pdf`, `.txt`, `.csv`, `.html`, `.htm`, `.docx`, `.xlsx`.
+You can also pass an explicit media type, e.g. `DocumentBlock.FromFile("notes.md", "text/plain")`.
 
 > **Note**: This is a C# SDK-unique feature not available in the original Python SDK.
 

@@ -20,7 +20,8 @@ Claude Agent SDK for C# は、Claude Codeと対話するための2つの主要�
 ### 主な機能
 
 - 用途に応じた2つの柔軟なAPI
-- 画像入力サポート（base64、URL、ローカルファイル）
+- 画像入力サポート（base64、URL、ローカルファイル） — PNG, JPEG, GIF, WEBP
+- ドキュメント入力サポート（base64、URL、プレーンテキスト、ローカルファイル） — PDF, TXT, CSV, HTML, DOCX, XLSX
 - MCP (Model Context Protocol) によるカスタムツールのサポート
 - 拡張構成を備えたカスタムエージェント定義
 - イベント処理用のHooks（PreToolUse、PostToolUse、Notification等）
@@ -165,6 +166,58 @@ await client.QueryAsync([
 
 自動検出に対応するファイル拡張子: `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`
 明示的にメディアタイプを指定することも可能です: `ImageBlock.FromFile("image.bmp", "image/bmp")`
+
+> **注意**: これはC# SDK独自の機能であり、元のPython SDKには含まれていません。
+
+### ドキュメント入力
+
+`DocumentBlock`を使用して、PDF・TXT・CSV・HTML・DOCX・XLSX などのドキュメントをテキストと一緒にClaudeへ送信できます。base64エンコードデータ、URL、プレーンテキスト、ローカルファイルに対応しています。
+
+```csharp
+// ローカルファイルから（拡張子からメディアタイプを自動検出）
+await client.QueryAsync([
+    new TextBlock { Text = "このPDFを要約してください。" },
+    DocumentBlock.FromFile("report.pdf")
+]);
+
+// URLから（PDFはサーバ側で取得されます）
+await client.QueryAsync([
+    new TextBlock { Text = "このドキュメントの内容は？" },
+    DocumentBlock.FromUrl("https://example.com/whitepaper.pdf")
+]);
+
+// base64データから
+await client.QueryAsync([
+    DocumentBlock.FromBase64(base64Pdf, "application/pdf")
+]);
+
+// プレーンテキストから（CSV / HTML / TXT をインラインで渡す）
+await client.QueryAsync([
+    new TextBlock { Text = "このCSVを分析してください。" },
+    DocumentBlock.FromText("name,score\nAlice,90\nBob,82\n", "text/csv")
+]);
+
+// 非同期ファイル読み込み
+var doc = await DocumentBlock.FromFileAsync("large-spec.docx");
+await client.QueryAsync([
+    new TextBlock { Text = "この仕様書の矛盾点を指摘してください。" },
+    doc
+]);
+
+// タイトル・コンテキスト・引用を付ける
+await client.QueryAsync([
+    new TextBlock { Text = "該当箇所を引用してください。" },
+    DocumentBlock.FromFile("policy.pdf") with
+    {
+        Title = "Acme プライバシーポリシー 2026",
+        Context = "エンドユーザー向けの公開ポリシー",
+        Citations = new CitationsConfig { Enabled = true }
+    }
+]);
+```
+
+自動検出に対応するファイル拡張子: `.pdf`, `.txt`, `.csv`, `.html`, `.htm`, `.docx`, `.xlsx`
+明示的にメディアタイプを指定することも可能です: `DocumentBlock.FromFile("notes.md", "text/plain")`
 
 > **注意**: これはC# SDK独自の機能であり、元のPython SDKには含まれていません。
 

@@ -34,6 +34,7 @@ var mainOptions = new List<MenuOption>
     new("12", "Stderr callback example", StderrCallbackExamples.RunAsync),
     new("13", "Filesystem agents example", FilesystemAgentsExamples.RunAsync),
     new("14", "Plugin example", PluginExamples.RunAsync),
+    new("15", "Document input examples (PDF/TXT/CSV/HTML/DOCX/XLSX)", DocumentInputExamples.RunAllAsync),
     new("all", "Run all examples", RunAllExamplesAsync)
 };
 
@@ -135,6 +136,9 @@ static async Task RunAllExamplesAsync()
     ExampleHelper.PrintSeparator();
 
     await PluginExamples.RunAsync();
+    ExampleHelper.PrintSeparator();
+
+    await DocumentInputExamples.RunAllAsync();
 }
 
 record MenuOption(string Key, string Description, Func<Task> Action);
