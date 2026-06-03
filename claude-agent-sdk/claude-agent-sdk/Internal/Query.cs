@@ -116,7 +116,7 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
     private readonly ILogger<Query>? _logger;
 
     // Dependencies
-    private readonly Transport.Transport _transport;
+    private readonly Transport _transport;
     private readonly bool _isStreamingMode;
     private readonly CanUseTool? _canUseTool;
     private readonly Dictionary<HookEvent, List<HookMatcher>>? _hooks;
@@ -175,7 +175,7 @@ internal sealed class Query : IAsyncEnumerable<Dictionary<string, object?>>, IAs
     /// <param name="initializeTimeout">Timeout for the initialize request</param>
     /// <param name="logger">Optional logger</param>
     internal Query(
-        Transport.Transport transport,
+        Transport transport,
         bool isStreamingMode,
         CanUseTool? canUseTool = null,
         Dictionary<HookEvent, List<HookMatcher>>? hooks = null,

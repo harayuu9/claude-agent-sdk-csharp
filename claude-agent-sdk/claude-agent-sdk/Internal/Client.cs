@@ -1,6 +1,5 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-using ClaudeAgentSdk.Internal.Transport;
 
 namespace ClaudeAgentSdk.Internal;
 
@@ -21,7 +20,7 @@ internal class InternalClient
     public async IAsyncEnumerable<Message> ProcessQueryAsync(
         object prompt,
         ClaudeAgentOptions options,
-        Transport.Transport? transport = null,
+        Transport? transport = null,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         // Fail fast on invalid session_store option combinations
@@ -52,7 +51,7 @@ internal class InternalClient
     private async IAsyncEnumerable<Message> ProcessQueryInnerAsync(
         object prompt,
         ClaudeAgentOptions options,
-        Transport.Transport? transport,
+        Transport? transport,
         MaterializedResume? materialized,
         [EnumeratorCancellation] CancellationToken ct = default)
     {

@@ -1,6 +1,5 @@
 using System.Runtime.CompilerServices;
 using ClaudeAgentSdk.Internal;
-using ClaudeAgentSdk.Internal.Transport;
 
 namespace ClaudeAgentSdk;
 

@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading.Channels;
-using ClaudeAgentSdk.Internal.Transport;
+using ClaudeAgentSdk;
 
 namespace UnitTest.Helpers;
 

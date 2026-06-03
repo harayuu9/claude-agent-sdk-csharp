@@ -1,7 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using ClaudeAgentSdk.Internal;
-using ClaudeAgentSdk.Internal.Transport;
 
 using InternalQuery = ClaudeAgentSdk.Internal.Query;
 

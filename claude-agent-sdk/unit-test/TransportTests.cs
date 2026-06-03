@@ -1,7 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
 using ClaudeAgentSdk;
-using ClaudeAgentSdk.Internal.Transport;
 
 namespace UnitTest;
 

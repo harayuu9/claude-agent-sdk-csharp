@@ -516,6 +516,68 @@ Console.WriteLine($"新セッション: {result.SessionId}");
 SessionMutations.DeleteSession("session-uuid");
 ```
 
+### カスタムトランスポート
+
+`Transport` は公式にサポートされた拡張ポイントです。これを実装すると、Claude Code の `stream-json` プロトコルを任意のチャネル（例: WebSocket/vsock 経由で接続するリモートの Claude Code インスタンス）にブリッジでき、ローカル実行とリモート実行を同一の `IAsyncEnumerable<Message>` に集約できます。
+
+生のテキストチャンク（行または断片）からメッセージ辞書への変換には `StreamJsonParser` を使います。部分 JSON のバッファリング、埋め込み改行、非 JSON 行のスキップを、組み込みのサブプロセストランスポートと同じ挙動で処理します。
+
+```csharp
+using System.Net.WebSockets;
+using System.Runtime.CompilerServices;
+using System.Text;
+using ClaudeAgentSdk;
+
+// WebSocket 経由で接続するリモートの `claude --output-format=stream-json` をブリッジする。
+public sealed class WebSocketTransport(Uri uri) : Transport
+{
+    private readonly ClientWebSocket _ws = new();
+
+    public override bool IsReady => _ws.State == WebSocketState.Open;
+
+    public override Task ConnectAsync(CancellationToken ct = default) => _ws.ConnectAsync(uri, ct);
+
+    public override Task WriteAsync(string data, CancellationToken ct = default) =>
+        _ws.SendAsync(Encoding.UTF8.GetBytes(data), WebSocketMessageType.Text, endOfMessage: true, ct).AsTask();
+
+    public override Task EndInputAsync() =>
+        _ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "eof", CancellationToken.None);
+
+    public override async Task CloseAsync()
+    {
+        if (_ws.State is WebSocketState.Open or WebSocketState.CloseReceived)
+            await _ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "done", CancellationToken.None);
+        _ws.Dispose();
+    }
+
+    // バッファリングを再実装せず、SDK の stream-json パーサを再利用する。
+    public override IAsyncEnumerable<Dictionary<string, object?>> ReadMessagesAsync(
+        CancellationToken ct = default) =>
+        StreamJsonParser.ParseAsync(ReceiveChunksAsync(ct), maxBufferSize: null, ct);
+
+    private async IAsyncEnumerable<string> ReceiveChunksAsync([EnumeratorCancellation] CancellationToken ct)
+    {
+        var buffer = new byte[8192];
+        while (_ws.State == WebSocketState.Open)
+        {
+            var result = await _ws.ReceiveAsync(buffer, ct);
+            if (result.MessageType == WebSocketMessageType.Close)
+                yield break;
+            if (result.Count > 0)
+                yield return Encoding.UTF8.GetString(buffer, 0, result.Count);
+        }
+    }
+}
+
+// ローカル実行は既定のサブプロセストランスポートを、リモート実行はカスタムトランスポートを渡す。
+// どちらも同一の型付き Message ストリームを返す。
+await foreach (var message in ClaudeAgent.QueryAsync(
+                   "このリポジトリを要約して", options, new WebSocketTransport(uri)))
+{
+    Console.WriteLine(message);
+}
+```
+
 ## サンプル
 
 `example/`ディレクトリにはSDKの全機能を示す包括的なサンプルが含まれています：

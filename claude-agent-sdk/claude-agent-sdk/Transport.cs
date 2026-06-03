@@ -1,16 +1,28 @@
-namespace ClaudeAgentSdk.Internal.Transport;
+namespace ClaudeAgentSdk;
 
 /// <summary>
 /// Abstract transport for Claude communication.
 ///
-/// WARNING: This internal API is exposed for custom transport implementations
-/// (e.g., remote Claude Code connections). The Claude Code team may change or
-/// remove this abstract class in any future release. Custom implementations
-/// must be updated to match interface changes.
+/// This is a supported extension point. Implement it to bridge Claude Code's
+/// <c>stream-json</c> protocol over a custom channel — for example a remote
+/// Claude Code instance relayed via WebSocket/vsock — so that local and remote
+/// execution converge on the same <see cref="Message"/> stream. Pass an instance
+/// to <see cref="ClaudeAgent"/>, <see cref="Query"/>, or <see cref="ClaudeSDKClient"/>.
+///
+/// Implementations are expected to:
+/// <list type="bullet">
+///   <item>emit raw JSON message dictionaries from <see cref="ReadMessagesAsync"/>
+///   (see <see cref="StreamJsonParser"/> for the canonical stream-json parsing helper),</item>
+///   <item>accept newline-delimited JSON via <see cref="WriteAsync"/>,</item>
+///   <item>and signal end-of-input via <see cref="EndInputAsync"/>.</item>
+/// </list>
 ///
 /// This is a low-level transport interface that handles raw I/O with the Claude
-/// process or service. The Query class builds on top of this to implement the
-/// control protocol and message routing.
+/// process or service. The <c>Query</c> class builds on top of this to implement
+/// the control protocol and message routing.
+///
+/// API stability: this contract follows the package's semantic versioning;
+/// breaking changes occur only on a major (or documented preview) version bump.
 /// </summary>
 public abstract class Transport
 {

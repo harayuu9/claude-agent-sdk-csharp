@@ -1,5 +1,5 @@
 using System.Runtime.CompilerServices;
-using ClaudeAgentSdk.Internal.Transport;
+using ClaudeAgentSdk;
 
 namespace UnitTest.Helpers;
 

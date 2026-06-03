@@ -516,6 +516,68 @@ Console.WriteLine($"New session: {result.SessionId}");
 SessionMutations.DeleteSession("session-uuid");
 ```
 
+### Custom Transport
+
+`Transport` is a supported extension point. Implement it to bridge Claude Code's `stream-json` protocol over a custom channel — for example a remote Claude Code instance relayed over WebSocket/vsock — so that local and remote execution converge on the same `IAsyncEnumerable<Message>`.
+
+Use `StreamJsonParser` to turn raw text chunks (full lines or fragments) into message dictionaries; it handles partial-JSON buffering, embedded newlines, and non-JSON line skipping exactly like the built-in subprocess transport.
+
+```csharp
+using System.Net.WebSockets;
+using System.Runtime.CompilerServices;
+using System.Text;
+using ClaudeAgentSdk;
+
+// Bridges a remote `claude --output-format=stream-json` reached over a WebSocket.
+public sealed class WebSocketTransport(Uri uri) : Transport
+{
+    private readonly ClientWebSocket _ws = new();
+
+    public override bool IsReady => _ws.State == WebSocketState.Open;
+
+    public override Task ConnectAsync(CancellationToken ct = default) => _ws.ConnectAsync(uri, ct);
+
+    public override Task WriteAsync(string data, CancellationToken ct = default) =>
+        _ws.SendAsync(Encoding.UTF8.GetBytes(data), WebSocketMessageType.Text, endOfMessage: true, ct).AsTask();
+
+    public override Task EndInputAsync() =>
+        _ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "eof", CancellationToken.None);
+
+    public override async Task CloseAsync()
+    {
+        if (_ws.State is WebSocketState.Open or WebSocketState.CloseReceived)
+            await _ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "done", CancellationToken.None);
+        _ws.Dispose();
+    }
+
+    // Reuse the SDK's stream-json parser instead of re-implementing buffering.
+    public override IAsyncEnumerable<Dictionary<string, object?>> ReadMessagesAsync(
+        CancellationToken ct = default) =>
+        StreamJsonParser.ParseAsync(ReceiveChunksAsync(ct), maxBufferSize: null, ct);
+
+    private async IAsyncEnumerable<string> ReceiveChunksAsync([EnumeratorCancellation] CancellationToken ct)
+    {
+        var buffer = new byte[8192];
+        while (_ws.State == WebSocketState.Open)
+        {
+            var result = await _ws.ReceiveAsync(buffer, ct);
+            if (result.MessageType == WebSocketMessageType.Close)
+                yield break;
+            if (result.Count > 0)
+                yield return Encoding.UTF8.GetString(buffer, 0, result.Count);
+        }
+    }
+}
+
+// Local execution uses the default subprocess transport; remote execution passes
+// the custom transport. Both yield the same typed Message stream.
+await foreach (var message in ClaudeAgent.QueryAsync(
+                   "Summarize this repository", options, new WebSocketTransport(uri)))
+{
+    Console.WriteLine(message);
+}
+```
+
 ## Examples
 
 The `example/` directory contains comprehensive examples demonstrating all SDK features:

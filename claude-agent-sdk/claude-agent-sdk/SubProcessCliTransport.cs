@@ -5,14 +5,13 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
-namespace ClaudeAgentSdk.Internal.Transport;
+namespace ClaudeAgentSdk;
 
 /// <summary>
 /// Subprocess transport using Claude Code CLI.
 /// </summary>
 internal class SubprocessCliTransport : Transport
 {
-    private const int DefaultMaxBufferSize = 1024 * 1024; // 1MB buffer limit
     private const string MinimumClaudeCodeVersion = "2.0.0";
     private const string SdkVersion = "0.1.0"; // TODO: Get from assembly version
 
@@ -53,7 +52,7 @@ internal class SubprocessCliTransport : Transport
         _logger = logger;
         _cliPath = options.CliPath ?? FindCli();
         _cwd = options.Cwd;
-        _maxBufferSize = options.MaxBufferSize ?? DefaultMaxBufferSize;
+        _maxBufferSize = options.MaxBufferSize ?? StreamJsonParser.DefaultMaxBufferSize;
     }
 
     /// <inheritdoc />
@@ -383,64 +382,12 @@ internal class SubprocessCliTransport : Transport
             throw new CLIConnectionException("Not connected");
         }
 
-        var jsonBuffer = new StringBuilder();
-
-        // Process stdout messages
-        while (await _stdoutReader.ReadLineAsync(cancellationToken).ConfigureAwait(false) is { } line)
+        // stream-json parsing is shared with custom transports via StreamJsonParser.
+        await foreach (var data in StreamJsonParser
+                           .ParseAsync(ReadStdoutLinesAsync(cancellationToken), _maxBufferSize, cancellationToken)
+                           .ConfigureAwait(false))
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var lineStr = line.Trim();
-            if (string.IsNullOrEmpty(lineStr))
-                continue;
-
-            // Accumulate partial JSON until we can parse it
-            var jsonLines = lineStr.Split('\n');
-
-            foreach (var jsonLine in jsonLines)
-            {
-                var trimmedLine = jsonLine.Trim();
-                if (string.IsNullOrEmpty(trimmedLine))
-                    continue;
-
-                // Skip non-JSON lines (e.g., [SandboxDebug] output) when not mid-parse
-                if (jsonBuffer.Length == 0 && !trimmedLine.StartsWith('{'))
-                {
-                    continue;
-                }
-
-                // Keep accumulating partial JSON until we can parse it
-                jsonBuffer.Append(trimmedLine);
-
-                if (jsonBuffer.Length > _maxBufferSize)
-                {
-                    var bufferLength = jsonBuffer.Length;
-                    jsonBuffer.Clear();
-                    throw new CLIJSONDecodeException(
-                        $"JSON message exceeded maximum buffer size of {_maxBufferSize} bytes",
-                        new ArgumentException($"Buffer size {bufferLength} exceeds limit {_maxBufferSize}"));
-                }
-
-                Dictionary<string, object?>? data = null;
-                var parseSucceeded = false;
-                try
-                {
-                    data = JsonSerializer.Deserialize<Dictionary<string, object?>>(jsonBuffer.ToString());
-                    jsonBuffer.Clear();
-                    parseSucceeded = true;
-                }
-                catch (JsonException)
-                {
-                    // We are speculatively decoding the buffer until we get
-                    // a full JSON object. If there is an actual issue, we
-                    // raise an error after exceeding the configured limit.
-                }
-
-                if (parseSucceeded && data != null)
-                {
-                    yield return data;
-                }
-            }
+            yield return data;
         }
 
         // Check process completion and handle errors
@@ -467,6 +414,19 @@ internal class SubprocessCliTransport : Transport
     }
 
     #region Private Methods
+
+    /// <summary>
+    /// Yields stdout lines from the subprocess as raw chunks for <see cref="StreamJsonParser"/>.
+    /// </summary>
+    private async IAsyncEnumerable<string> ReadStdoutLinesAsync(
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        while (await _stdoutReader!.ReadLineAsync(cancellationToken).ConfigureAwait(false) is { } line)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            yield return line;
+        }
+    }
 
     private bool ShouldPipeStderr()
     {
